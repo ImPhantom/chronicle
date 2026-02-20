@@ -1,6 +1,8 @@
+import os
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -20,6 +22,15 @@ def list_frames(
     if timelapse_id is not None:
         query = query.filter(FrameModel.timelapse_id == timelapse_id)
     return query.all()
+
+@router.get("/{frame_id}/image")
+def get_frame_image(frame_id: int, db: Session = Depends(get_db)):
+    frame = db.get(FrameModel, frame_id)
+    if frame is None:
+        raise HTTPException(status_code=404, detail="Frame not found")
+    if not os.path.isfile(frame.file_path):
+        raise HTTPException(status_code=404, detail="Frame image file not found on disk")
+    return FileResponse(frame.file_path)
 
 
 @router.get("/{frame_id}", response_model=Frame)

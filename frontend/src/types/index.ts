@@ -52,6 +52,8 @@ export interface TimelapseResponse {
 	started_at: string | null;
 	ended_at: string | null;
 	created_at: string;
+	last_frame_id: number | null;
+	frame_count: number;
 }
 
 export interface TimelapseCreateRequest {

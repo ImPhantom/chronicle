@@ -30,5 +30,7 @@ class TimelapseUpdate(BaseModel):
 class Timelapse(TimelapseBase):
     id: int
     created_at: datetime.datetime
+    last_frame_id: Optional[int] = None
+    frame_count: int = 0
 
     model_config = {"from_attributes": True}
