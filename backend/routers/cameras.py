@@ -77,7 +77,7 @@ def _capture_network(rtsp_url: str, settings: AppSettingsModel) -> Response:
     ]
     try:
         result = subprocess.run(
-            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout
+            cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout
         )
     except subprocess.TimeoutExpired:
         raise HTTPException(504, f"FFmpeg timed out after {timeout}s")
@@ -89,14 +89,14 @@ def _capture_network(rtsp_url: str, settings: AppSettingsModel) -> Response:
 
 
 def _capture_hardware(device_index: int) -> Response:
-    cap = cv2.VideoCapture(device_index)
+    cap = cv2.VideoCapture(device_index) # pylint: disable=no-member
     try:
         if not cap.isOpened():
             raise HTTPException(500, f"Could not open hardware camera at index {device_index}")
         ok, frame = cap.read()
         if not ok or frame is None:
             raise HTTPException(500, "Failed to read frame from hardware camera")
-        encode_ok, buf = cv2.imencode(".webp", frame)
+        encode_ok, buf = cv2.imencode(".webp", frame) # pylint: disable=no-member
         if not encode_ok:
             raise HTTPException(500, "Failed to encode frame as WebP")
         return Response(content=buf.tobytes(), media_type="image/webp")

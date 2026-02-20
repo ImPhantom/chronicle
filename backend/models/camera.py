@@ -24,7 +24,7 @@ class Camera(Base):
     device_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime, server_default=func.now(), nullable=False
+        DateTime, server_default=func.now(), nullable=False # pylint: disable=not-callable
     )
 
     timelapses: Mapped[list["Timelapse"]] = relationship(  # noqa: F821

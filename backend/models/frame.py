@@ -15,7 +15,7 @@ class Frame(Base):
     )
     file_path: Mapped[str] = mapped_column(String, nullable=False)
     captured_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime, server_default=func.now(), nullable=False
+        DateTime, server_default=func.now(), nullable=False # pylint: disable=not-callable
     )
 
     timelapse: Mapped["Timelapse"] = relationship("Timelapse", back_populates="frames")  # noqa: F821

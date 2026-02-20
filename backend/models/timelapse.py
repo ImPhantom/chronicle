@@ -29,7 +29,7 @@ class Timelapse(Base):
     started_at: Mapped[datetime.datetime | None] = mapped_column(DateTime, nullable=True)
     ended_at: Mapped[datetime.datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime, server_default=func.now(), nullable=False
+        DateTime, server_default=func.now(), nullable=False # pylint: disable=not-callable
     )
 
     camera: Mapped["Camera"] = relationship("Camera", back_populates="timelapses")  # noqa: F821
