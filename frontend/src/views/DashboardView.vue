@@ -4,6 +4,7 @@ import type { CameraResponse, TimelapseResponse } from '@/types'
 import TimelapseDialog from '@/components/TimelapseDialog.vue';
 import { PhCamera, PhCameraSlash } from '@phosphor-icons/vue';
 import ConnectionTypeBadge from '@/components/ConnectionTypeBadge.vue';
+import TimelapseStatusDot from '@/components/TimelapseStatusDot.vue';
 
 const cameras = ref<CameraResponse[]>([])
 const timelapses = ref<TimelapseResponse[]>([])
@@ -38,19 +39,31 @@ onMounted(async () => {
       	<p class="text-sm">Add a camera from the navbar to get started.</p>
     </div>
 
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
 		<a 
 			v-for="timelapse in timelapses"
 			:key="timelapse.id"
+			:href="`/timelapse/${timelapse.id}`"
 			class="flex border rounded-lg p-3 gap-3 bg-zinc-900 hover:scale-105 hover:cursor-pointer transition-all"
 		>
-			<div class="relative aspect-video h-24 rounded-md bg-zinc-800/60 border">
-				<!-- last image captured in timelapse -->
-				<!-- TODO: implement last frame-->
+			<div class="relative aspect-video h-24 rounded-md bg-zinc-800/60 border overflow-hidden">
 				<PhCameraSlash variant="duotone" size="32" class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 text-red-400/40" />
+				<img
+					v-if="timelapse.last_frame_id"
+					:src="`/api/v1/frames/${timelapse.last_frame_id}/image`"
+					class="absolute inset-0 w-full h-full object-cover"
+					@error="(e) => ((e.currentTarget as HTMLImageElement).style.display = 'none')"
+				/>
 			</div>
-			<div class="flex flex-col justify-evenly">
-				<h2 class="text-lg font-medium">{{ timelapse.name }}</h2>
+			<div class="flex flex-col justify-evenly grow">
+				<div class="flex items-center justify-between">
+					<h2 class="text-lg font-medium">{{ timelapse.name }}</h2>
+					<div class="mr-2 px-2 py-1 bg-zinc-700/60 rounded-sm">
+						<TimelapseStatusDot :status="timelapse.status" class="text-sm" />
+					</div>
+					
+				</div>
+				
 				<div class="flex items-center">
 					<PhCamera variant="duotone" size="20" class="inline-block mr-1 text-zinc-400" />
 					<span class="text-sm ml-1 text-muted-foreground">{{ cameras.find(c => c.id == timelapse.camera_id)?.name || 'Unknown Camera' }}</span>
