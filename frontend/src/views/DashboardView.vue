@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { CameraResponse, type TimelapseResponse } from '@/types'
+import type { CameraResponse, TimelapseResponse } from '@/types'
 import TimelapseDialog from '@/components/TimelapseDialog.vue';
-import { a } from 'vue-router/dist/index-Cu9B0wDz.mjs';
 import { PhCamera, PhCameraSlash } from '@phosphor-icons/vue';
 import ConnectionTypeBadge from '@/components/ConnectionTypeBadge.vue';
 
-// placeholder — wire to API later
 const cameras = ref<CameraResponse[]>([])
 const timelapses = ref<TimelapseResponse[]>([])
 const fetchData = async () => {
@@ -60,7 +58,6 @@ onMounted(async () => {
 				</div>
 				<p class="text-sm text-muted-foreground">Captures every {{ timelapse.interval_seconds }} seconds</p>
 			</div>
-			
 		</a>
     </div>
   </div>
