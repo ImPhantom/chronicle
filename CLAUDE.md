@@ -4,31 +4,38 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Chronicle is a timelapse management app for network cameras. It captures RTSP streams as WebP images via FFmpeg, stores metadata in SQLite, and presents a management UI.
+Chronicle is a timelapse management app for network and USB cameras. It captures RTSP streams and hardware camera feeds as WebP images via FFmpeg, stores metadata in SQLite, presents a management UI, and will render timelapse frames into downloadable video files.
 
 ## Architecture
 
 ```
 chronicle/
 ├── backend/        # Python + FastAPI
+│   ├── routers/    # FastAPI route handlers
+│   ├── schemas/    # Pydantic request/response schemas
+│   └── models/     # SQLAlchemy ORM models
 └── frontend/       # Vite + Vue 3 + TypeScript
 ```
 
 ### Backend (Python + FastAPI)
 
 - **FastAPI** — HTTP API server
-- **APScheduler** — schedules periodic camera capture jobs
 - **SQLAlchemy + SQLite** — persistent storage for cameras and timelapse metadata
-- **FFmpeg** subprocess — captures RTSP streams to WebP images
+- **Pydantic** — request/response schema validation
+- **FFmpeg** subprocess — captures RTSP streams and hardware cameras to WebP images
+- **OpenCV** (`opencv-python-headless`, `cv2-enumerate-cameras`) — hardware camera enumeration and capture
+- **APScheduler** — scheduled capture jobs (planned; not yet in `requirements.txt`)
 - Entry point: `backend/main.py`
 - Dependencies: `backend/requirements.txt`
 
 ### Frontend (Vite + Vue 3)
 
 - **Vue 3** with TypeScript
-- **shadcn-vue + Tailwind** — UI components and styling (planned; not yet installed)
-- **vue-router** — client-side routing (planned; not yet installed)
-- **Pinia** — state management (planned; not yet installed)
+- **shadcn-vue (reka-ui) + Tailwind CSS v4** — UI components and styling
+- **vue-router** — client-side routing
+- **@phosphor-icons/vue** + **lucide-vue-next** — icon libraries
+- **@vueuse/core** — composition utilities
+- **Pinia** — state management (not yet installed)
 - Entry point: `frontend/src/main.ts`
 - Package manager: **Bun** (use `bun` not `npm`)
 
