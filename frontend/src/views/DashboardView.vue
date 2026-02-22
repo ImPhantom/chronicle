@@ -1,20 +1,21 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import type { CameraResponse, TimelapseResponse } from '@/types'
+import type { CameraResponse, TimelapseResponse, TimelapseStatus } from '@/types'
 import TimelapseDialog from '@/components/TimelapseDialog.vue';
-import { PhCamera, PhCameraSlash } from '@phosphor-icons/vue';
+import { PhCamera, PhCameraSlash, PhFilmStrip, PhTimer, PhVideoCamera } from '@phosphor-icons/vue';
 import ConnectionTypeBadge from '@/components/ConnectionTypeBadge.vue';
-import TimelapseStatusDot from '@/components/TimelapseStatusDot.vue';
 
 const cameras = ref<CameraResponse[]>([])
 const timelapses = ref<TimelapseResponse[]>([])
+
 const fetchData = async () => {
 	try {
-		const _timelapses = await fetch('/api/v1/timelapses')
-		timelapses.value = await _timelapses.json()
-
-		const _cameras = await fetch('/api/v1/cameras')
-		cameras.value = await _cameras.json()
+		const [tlRes, camRes] = await Promise.all([
+			fetch('/api/v1/timelapses'),
+			fetch('/api/v1/cameras'),
+		])
+		timelapses.value = await tlRes.json()
+		cameras.value = await camRes.json()
 	} catch {
 		timelapses.value = []
 		cameras.value = []
@@ -24,54 +25,76 @@ const fetchData = async () => {
 onMounted(async () => {
 	await fetchData()
 })
+
+const statusMeta: Record<TimelapseStatus, { dot: string; pill: string; label: string }> = {
+	pending: { dot: 'bg-zinc-400', pill: 'bg-zinc-700/70 text-zinc-300', label: 'Pending' },
+	running: { dot: 'bg-emerald-400', pill: 'bg-emerald-950/70 text-emerald-300', label: 'Running' },
+	paused: { dot: 'bg-amber-400', pill: 'bg-amber-950/70 text-amber-300', label: 'Paused' },
+	completed: { dot: 'bg-sky-400', pill: 'bg-sky-950/70 text-sky-300', label: 'Completed' },
+}
+
+function formatInterval(seconds: number): string {
+	if (seconds < 60) return `Every ${seconds}s`
+	if (seconds < 3600) return `Every ${Math.round(seconds / 60)}m`
+	const h = Math.floor(seconds / 3600)
+	const m = Math.round((seconds % 3600) / 60)
+	return m > 0 ? `Every ${h}h ${m}m` : `Every ${h}h`
+}
 </script>
 
 <template>
-  <div>
-	<div class="flex items-center justify-between mb-6">
-    	<h1 class="text-2xl font-semibold mb-6">Active Timelapses</h1>
-		<TimelapseDialog v-on:timelapse-created="fetchData" />
-	</div>
+	<div>
+		<div class="flex items-center justify-between mb-6">
+			<h1 class="text-2xl font-semibold">Active Timelapses</h1>
+			<TimelapseDialog v-on:timelapse-created="fetchData" />
+		</div>
 
-    <div v-if="timelapses.length === 0"
-         class="flex flex-col items-center justify-center py-24 text-muted-foreground gap-2">
-      	<p class="text-sm">No active timelapses yet.</p>
-      	<p class="text-sm">Add a camera from the navbar to get started.</p>
-    </div>
+		<div v-if="timelapses.length === 0" class="flex flex-col items-center justify-center py-24 text-muted-foreground gap-3">
+			<PhVideoCamera :size="56" class="text-zinc-600" />
+			<p class="text-base font-medium text-zinc-400">No timelapses yet</p>
+			<p class="text-sm">Add a camera from the navbar to get started.</p>
+		</div>
 
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
-		<a 
-			v-for="timelapse in timelapses"
-			:key="timelapse.id"
-			:href="`/timelapse/${timelapse.id}`"
-			class="flex border rounded-lg p-3 gap-3 bg-zinc-900 hover:scale-105 hover:cursor-pointer transition-all"
-		>
-			<div class="relative aspect-video h-24 rounded-md bg-zinc-800/60 border overflow-hidden">
-				<PhCameraSlash variant="duotone" size="32" class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 text-red-400/40" />
-				<img
-					v-if="timelapse.last_frame_id"
-					:src="`/api/v1/frames/${timelapse.last_frame_id}/image`"
-					class="absolute inset-0 w-full h-full object-cover"
-					@error="(e) => ((e.currentTarget as HTMLImageElement).style.display = 'none')"
-				/>
-			</div>
-			<div class="flex flex-col justify-evenly grow">
-				<div class="flex items-center justify-between">
-					<h2 class="text-lg font-medium">{{ timelapse.name }}</h2>
-					<div class="mr-2 px-2 py-1 bg-zinc-700/60 rounded-sm">
-						<TimelapseStatusDot :status="timelapse.status" class="text-sm" />
+		<div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+			<a 
+				v-for="timelapse in timelapses" :key="timelapse.id"
+				:href="`/timelapse/${timelapse.id}`"
+				class="flex flex-col border border-zinc-300/60 dark:border-zinc-800 rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-900 hover:cursor-pointer hover:-translate-y-1 hover:shadow-lg hover:shadow-zinc-400/50 dark:hover:shadow-black/40 transition-all duration-200"
+			>
+				<!-- Thumbnail -->
+				<div class="relative aspect-video w-full bg-zinc-500 dark:bg-zinc-800/60">
+					<!-- Fallback icon -->
+					<PhCameraSlash variant="duotone" :size="36" class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-red-400/40" />
+					<!-- Last frame image -->
+					<img v-if="timelapse.last_frame_id" :src="`/api/v1/frames/${timelapse.last_frame_id}/image`" class="absolute inset-0 w-full h-full object-cover" @error="(e) => ((e.currentTarget as HTMLImageElement).style.display = 'none')" />
+					<!-- Bottom gradient for legibility -->
+					<div class="absolute bottom-0 left-0 right-0 h-12 bg-linear-to-t from-zinc-800/60 dark:from-black/70 to-transparent pointer-events-none" />
+					<!-- Frame count (bottom-left) -->
+					<div v-if="timelapse.frame_count > 0" class="absolute bottom-2 left-2.5 flex items-center gap-1 text-xs text-white/80">
+						<PhFilmStrip :size="14" />
+						<span>{{ timelapse.frame_count.toLocaleString() }}</span>
 					</div>
-					
+					<!-- Status pill (top-right) -->
+					<div class="absolute top-2 right-2 flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium backdrop-blur-sm" :class="statusMeta[timelapse.status].pill">
+						<span class="inline-block w-1.5 h-1.5 rounded-full" :class="statusMeta[timelapse.status].dot" />
+						{{ statusMeta[timelapse.status].label }}
+					</div>
 				</div>
-				
-				<div class="flex items-center">
-					<PhCamera variant="duotone" size="20" class="inline-block mr-1 text-zinc-400" />
-					<span class="text-sm ml-1 text-muted-foreground">{{ cameras.find(c => c.id == timelapse.camera_id)?.name || 'Unknown Camera' }}</span>
-					<ConnectionTypeBadge :cam="cameras.find(c => c.id == timelapse.camera_id) || { connection_type: 'network' }" />
+
+				<!-- Card body -->
+				<div class="flex flex-col gap-2 p-3.5">
+					<h2 class="text-base font-medium truncate">{{ timelapse.name }}</h2>
+					<div class="flex items-center gap-1.5 text-sm text-muted-foreground">
+						<PhCamera variant="duotone" :size="16" class="text-zinc-400 shrink-0" />
+						<span class="truncate">{{cameras.find(c => c.id === timelapse.camera_id)?.name || 'Unknown Camera'}}</span>
+						<ConnectionTypeBadge :cam="cameras.find(c => c.id === timelapse.camera_id) || { connection_type: 'network' }" />
+					</div>
+					<div class="flex items-center gap-1.5 text-sm text-muted-foreground">
+						<PhTimer variant="duotone" :size="16" class="text-zinc-400 shrink-0" />
+						<span>{{ formatInterval(timelapse.interval_seconds) }}</span>
+					</div>
 				</div>
-				<p class="text-sm text-muted-foreground">Captures every {{ timelapse.interval_seconds }} seconds</p>
-			</div>
-		</a>
-    </div>
-  </div>
+			</a>
+		</div>
+	</div>
 </template>

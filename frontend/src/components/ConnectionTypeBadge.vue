@@ -4,10 +4,15 @@ defineProps<{
 		connection_type: 'hardware' | 'network'
 	}
 }>()
+
+const meta: Record<'hardware' | 'network', { label: string, class: string }> = {
+	hardware: { label: 'Hardware', class: 'bg-emerald-800/80 text-emerald-200' },
+	network: { label: 'Network', class: 'bg-cyan-800/80 text-cyan-200' },
+}
 </script>
 
 <template>
-	<div class="px-1.5 py-0.5 text-xs font-medium rounded-sm ml-2" :class="{ 'bg-emerald-600/60': cam.connection_type == 'hardware', 'bg-cyan-600/60': cam.connection_type == 'network' }">
-		{{ cam.connection_type === 'hardware' ? 'Hardware' : 'Network' }}
+	<div class="px-1.5 py-0.5 text-xs font-medium rounded-sm ml-2" :class="meta[cam.connection_type].class">
+		{{ meta[cam.connection_type].label }}
 	</div>
 </template>
