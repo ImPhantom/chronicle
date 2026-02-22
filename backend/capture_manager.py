@@ -37,10 +37,10 @@ def start(timelapse_id: int, interval_seconds: int) -> None:
 
 
 def schedule_start(timelapse_id: int, start_at: datetime.datetime, interval_seconds: int) -> None:
-    """Register a one-shot job that auto-starts capture at start_at (naive UTC)."""
+    """Register a one-shot job that auto-starts capture at start_at (UTC)."""
     scheduler.add_job(
         _auto_start_job,
-        trigger=DateTrigger(run_date=start_at.replace(tzinfo=datetime.timezone.utc)),
+        trigger=DateTrigger(run_date=start_at),
         id=f"timelapse_start_{timelapse_id}",
         args=[timelapse_id, interval_seconds],
         replace_existing=True,
@@ -84,7 +84,7 @@ async def _auto_start_job(timelapse_id: int, interval_seconds: int) -> None:
         timelapse = db.get(Timelapse, timelapse_id)
         if timelapse is None or timelapse.status != TimelapseStatus.pending:
             return
-        now_utc = datetime.datetime.utcnow()
+        now_utc = datetime.datetime.now(datetime.timezone.utc)
         # Edge case: ended_at already passed by the time the start job fires.
         if timelapse.ended_at and now_utc >= timelapse.ended_at:
             timelapse.status = TimelapseStatus.completed
@@ -118,7 +118,7 @@ def _do_sync_capture(timelapse_id: int) -> bool:
         if timelapse is None or timelapse.status != TimelapseStatus.running:
             return False
 
-        if timelapse.ended_at and datetime.datetime.utcnow() >= timelapse.ended_at:
+        if timelapse.ended_at and datetime.datetime.now(datetime.timezone.utc) >= timelapse.ended_at:
             timelapse.status = TimelapseStatus.completed
             db.commit()
             return True
@@ -145,7 +145,7 @@ def _do_sync_capture(timelapse_id: int) -> bool:
         ext = _FORMAT_EXT.get(fmt, "webp")
         frame_dir = os.path.join(settings.storage_path, f"timelapse_{timelapse_id}")
         os.makedirs(frame_dir, exist_ok=True)
-        timestamp = datetime.datetime.utcnow().strftime("%Y%m%dT%H%M%S_%f")
+        timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%S_%f")
         filename = f"frame_{timestamp}.{ext}"
         file_path = os.path.join(frame_dir, filename)
 

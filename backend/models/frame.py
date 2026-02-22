@@ -1,9 +1,9 @@
 import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, func
+from sqlalchemy import ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from database import Base
+from database import Base, UTCDateTime
 
 
 class Frame(Base):
@@ -15,7 +15,7 @@ class Frame(Base):
     )
     file_path: Mapped[str] = mapped_column(String, nullable=False)
     captured_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime, server_default=func.now(), nullable=False # pylint: disable=not-callable
+        UTCDateTime, server_default=func.now(), nullable=False # pylint: disable=not-callable
     )
 
     timelapse: Mapped["Timelapse"] = relationship("Timelapse", back_populates="frames")  # noqa: F821

@@ -1,10 +1,10 @@
 import datetime
 import enum
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, func
+from sqlalchemy import Enum, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from database import Base
+from database import Base, UTCDateTime
 
 
 class TimelapseStatus(str, enum.Enum):
@@ -26,10 +26,10 @@ class Timelapse(Base):
     status: Mapped[TimelapseStatus] = mapped_column(
         Enum(TimelapseStatus), default=TimelapseStatus.pending, nullable=False
     )
-    started_at: Mapped[datetime.datetime | None] = mapped_column(DateTime, nullable=True)
-    ended_at: Mapped[datetime.datetime | None] = mapped_column(DateTime, nullable=True)
+    started_at: Mapped[datetime.datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    ended_at: Mapped[datetime.datetime | None] = mapped_column(UTCDateTime, nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime, server_default=func.now(), nullable=False # pylint: disable=not-callable
+        UTCDateTime, server_default=func.now(), nullable=False # pylint: disable=not-callable
     )
 
     camera: Mapped["Camera"] = relationship("Camera", back_populates="timelapses")  # noqa: F821

@@ -28,7 +28,7 @@ async def lifespan(app: FastAPI):
         for t in running:
             capture_manager.start(t.id, t.interval_seconds)
         # Re-register scheduled-start jobs for pending timelapses with a future start time.
-        now_utc = datetime.datetime.utcnow()
+        now_utc = datetime.datetime.now(datetime.timezone.utc)
         pending = db.query(TimelapseModel).filter(
             TimelapseModel.status == TimelapseStatus.pending,
             TimelapseModel.started_at > now_utc,

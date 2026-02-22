@@ -43,7 +43,7 @@ def create_timelapse(payload: TimelapseCreate, db: Session = Depends(get_db)):
     if timelapse.status == TimelapseStatus.running:
         cm.start(timelapse.id, timelapse.interval_seconds)
     elif timelapse.status == TimelapseStatus.pending and timelapse.started_at:
-        if timelapse.started_at > datetime.datetime.utcnow():
+        if timelapse.started_at > datetime.datetime.now(datetime.timezone.utc):
             cm.schedule_start(timelapse.id, timelapse.started_at, timelapse.interval_seconds)
     return timelapse
 
@@ -74,7 +74,7 @@ async def update_timelapse(
     # Re-sync the scheduled-start job whenever a pending timelapse is patched,
     # in case started_at was added or changed.
     if timelapse.status == TimelapseStatus.pending and timelapse.started_at:
-        if timelapse.started_at > datetime.datetime.utcnow():
+        if timelapse.started_at > datetime.datetime.now(datetime.timezone.utc):
             cm.schedule_start(timelapse.id, timelapse.started_at, timelapse.interval_seconds)
         else:
             cm.stop(timelapse_id)  # started_at moved to the past — cancel stale start job

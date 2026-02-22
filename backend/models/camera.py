@@ -1,10 +1,10 @@
 import datetime
 import enum
 
-from sqlalchemy import Boolean, DateTime, Enum, Integer, String, func
+from sqlalchemy import Boolean, Enum, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from database import Base
+from database import Base, UTCDateTime
 
 
 class ConnectionType(str, enum.Enum):
@@ -24,7 +24,7 @@ class Camera(Base):
     device_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime.datetime] = mapped_column(
-        DateTime, server_default=func.now(), nullable=False # pylint: disable=not-callable
+        UTCDateTime, server_default=func.now(), nullable=False # pylint: disable=not-callable
     )
 
     timelapses: Mapped[list["Timelapse"]] = relationship(  # noqa: F821
