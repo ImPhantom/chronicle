@@ -5,3 +5,4 @@ sqlalchemy==2.0.37
 pydantic==2.10.5
 opencv-python-headless
 cv2-enumerate-cameras
+apscheduler

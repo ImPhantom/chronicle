@@ -3,5 +3,6 @@ __pycache__/
 *.py[codz]
 *$py.class
 
-# Database
+# Data Files (database, timelapse images, etc.)
 *.db
+data/

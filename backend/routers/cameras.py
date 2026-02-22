@@ -1,11 +1,15 @@
-import subprocess
 from typing import List
 
-import cv2
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel as _BaseModel
 from sqlalchemy.orm import Session
 
+from capture import (
+    CaptureError,
+    _FORMAT_MEDIA_TYPE,
+    capture_hardware_bytes,
+    capture_network_bytes,
+)
 from database import get_db
 from models.camera import Camera as CameraModel
 from models.settings import AppSettings as AppSettingsModel
@@ -44,64 +48,30 @@ def test_capture(
 ):
     if payload.connection_type == "network":
         return _capture_network(payload.rtsp_url, settings)
-    return _capture_hardware(payload.device_index)
-
-
-_FORMAT_VCODEC = {
-    "webp": "webp",
-    "jpeg": "mjpeg",
-    "png": "png",
-}
-
-_FORMAT_MEDIA_TYPE = {
-    "webp": "image/webp",
-    "jpeg": "image/jpeg",
-    "png": "image/png",
-}
+    return _capture_hardware(payload.device_index, settings)
 
 
 def _capture_network(rtsp_url: str, settings: AppSettingsModel) -> Response:
     fmt = settings.capture_image_format
-    vcodec = _FORMAT_VCODEC.get(fmt, "webp")
-    media_type = _FORMAT_MEDIA_TYPE.get(fmt, "image/webp")
-    timeout = settings.ffmpeg_timeout_seconds
-
-    cmd = [
-        "ffmpeg",
-        "-rtsp_transport", settings.ffmpeg_rtsp_transport,
-        "-i", rtsp_url,
-        "-frames:v", "1",
-        "-f", "image2pipe",
-        "-vcodec", vcodec,
-        "pipe:1",
-    ]
     try:
-        result = subprocess.run(
-            cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout
+        data = capture_network_bytes(
+            rtsp_url,
+            image_format=fmt,
+            rtsp_transport=settings.ffmpeg_rtsp_transport,
+            timeout_seconds=settings.ffmpeg_timeout_seconds,
         )
-    except subprocess.TimeoutExpired:
-        raise HTTPException(504, f"FFmpeg timed out after {timeout}s")
-    except FileNotFoundError:
-        raise HTTPException(500, "FFmpeg not found on this system")
-    if result.returncode != 0 or not result.stdout:
-        raise HTTPException(500, "FFmpeg failed to capture a frame")
-    return Response(content=result.stdout, media_type=media_type)
+    except CaptureError as exc:
+        raise HTTPException(500, str(exc)) from exc
+    return Response(content=data, media_type=_FORMAT_MEDIA_TYPE.get(fmt, "image/webp"))
 
 
-def _capture_hardware(device_index: int) -> Response:
-    cap = cv2.VideoCapture(device_index) # pylint: disable=no-member
+def _capture_hardware(device_index: int, settings: AppSettingsModel) -> Response:
+    fmt = settings.capture_image_format
     try:
-        if not cap.isOpened():
-            raise HTTPException(500, f"Could not open hardware camera at index {device_index}")
-        ok, frame = cap.read()
-        if not ok or frame is None:
-            raise HTTPException(500, "Failed to read frame from hardware camera")
-        encode_ok, buf = cv2.imencode(".webp", frame) # pylint: disable=no-member
-        if not encode_ok:
-            raise HTTPException(500, "Failed to encode frame as WebP")
-        return Response(content=buf.tobytes(), media_type="image/webp")
-    finally:
-        cap.release()
+        data = capture_hardware_bytes(device_index, image_format=fmt)
+    except CaptureError as exc:
+        raise HTTPException(500, str(exc)) from exc
+    return Response(content=data, media_type=_FORMAT_MEDIA_TYPE.get(fmt, "image/webp"))
 
 
 @router.get("/{camera_id}", response_model=Camera)
