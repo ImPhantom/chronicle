@@ -1,9 +1,14 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import type { TimelapseResponse, CameraResponse, FrameResponse, TimelapseStatus } from '@/types'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import ConnectionTypeBadge from '@/components/ConnectionTypeBadge.vue'
 import { Button } from '@/components/ui/button'
+import {
+	AlertDialog, AlertDialogTrigger, AlertDialogContent,
+	AlertDialogHeader, AlertDialogTitle, AlertDialogDescription,
+	AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
+} from '@/components/ui/alert-dialog'
 import {
 	PhArrowLeft,
 	PhPlay,
@@ -16,6 +21,7 @@ import {
 	PhCameraSlash,
 	PhCamera,
 	PhSpinner,
+	PhTrash,
 } from '@phosphor-icons/vue'
 import TimelapseStatusDot from '@/components/TimelapseStatusDot.vue'
 
@@ -23,10 +29,17 @@ const timelapse = ref<TimelapseResponse | null>(null)
 const camera = ref<CameraResponse | null>(null)
 const lastFrame = ref<FrameResponse | null>(null)
 const isUpdating = ref(false)
+const isDeleting = ref(false)
 const imageError = ref(false)
 
 const router = useRouter()
 const route = useRoute()
+
+const isScheduled = computed(() =>
+	timelapse.value?.status === 'pending' &&
+	!!timelapse.value.started_at &&
+	new Date(timelapse.value.started_at) > new Date()
+)
 
 function formatDate(iso: string | null): string {
 	if (!iso) return '—'
@@ -57,6 +70,17 @@ async function updateStatus(newStatus: TimelapseStatus) {
 		}
 	} finally {
 		isUpdating.value = false
+	}
+}
+
+async function deleteTimelapse() {
+	if (!timelapse.value) return
+	isDeleting.value = true
+	try {
+		const res = await fetch(`/api/v1/timelapses/${timelapse.value.id}`, { method: 'DELETE' })
+		if (res.ok) router.push('/')
+	} finally {
+		isDeleting.value = false
 	}
 }
 
@@ -101,7 +125,7 @@ onMounted(async () => {
 			<div class="space-y-1">
 				<h1 class="text-2xl font-semibold">{{ timelapse.name }}</h1>
 				<div class="flex items-center gap-2 text-sm text-muted-foreground">
-					<TimelapseStatusDot :status="timelapse.status" />
+					<TimelapseStatusDot :status="timelapse.status" :scheduled="isScheduled" />
 					<span>·</span>
 					<span>every {{ timelapse.interval_seconds }}s</span>
 				</div>
@@ -143,19 +167,54 @@ onMounted(async () => {
 				<template v-else-if="timelapse.status === 'completed'">
 					<span class="text-sm text-muted-foreground">Completed</span>
 				</template>
+
+				<!-- Delete (always shown) -->
+				<AlertDialog>
+					<AlertDialogTrigger as-child>
+						<Button size="sm" variant="outline" class="border-red-500 text-red-400 hover:bg-red-500/10" :disabled="isDeleting">
+							<PhTrash variant="duotone" />
+							Delete
+						</Button>
+					</AlertDialogTrigger>
+					<AlertDialogContent>
+						<AlertDialogHeader>
+							<AlertDialogTitle>Delete timelapse?</AlertDialogTitle>
+							<AlertDialogDescription>
+								This will permanently delete "{{ timelapse.name }}" and all its captured frames.
+								This action cannot be undone.
+							</AlertDialogDescription>
+						</AlertDialogHeader>
+						<AlertDialogFooter>
+							<AlertDialogCancel>Cancel</AlertDialogCancel>
+							<AlertDialogAction @click="deleteTimelapse" class="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+								Delete
+							</AlertDialogAction>
+						</AlertDialogFooter>
+					</AlertDialogContent>
+				</AlertDialog>
 			</div>
+		</div>
+
+		<!-- Scheduled info banner -->
+		<div v-if="isScheduled" class="flex items-center gap-3 px-4 py-3 rounded-lg border border-indigo-500/30 bg-indigo-500/10 text-sm text-indigo-300">
+			<PhClock variant="duotone" :size="18" class="shrink-0 text-indigo-400" />
+			<span>
+				This timelapse is <strong>scheduled to start</strong> on
+				<strong>{{ formatDate(timelapse.started_at) }}</strong>.
+				It will begin capturing automatically.
+			</span>
 		</div>
 
 		<!-- Main content grid -->
 		<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
 			<!-- Last frame (left, 2 cols) -->
-			<div class="lg:col-span-2 border rounded-lg bg-zinc-900 p-4 space-y-3">
+			<div class="lg:col-span-2 border rounded-lg bg-zinc-100 dark:bg-zinc-900 p-4 space-y-3">
 				<h2 class="text-sm font-medium flex items-center gap-2">
 					<PhImages variant="duotone" :size="18" class="text-zinc-400" />
 					Last Frame
 				</h2>
 
-				<div class="relative aspect-video w-full rounded-md bg-zinc-800/60 border overflow-hidden">
+				<div class="relative aspect-video w-full rounded-md bg-zinc-300/70 dark:bg-zinc-800/60 border overflow-hidden">
 					<img
 						v-if="lastFrame && !imageError"
 						:src="`/api/v1/frames/${lastFrame.id}/image`"
@@ -163,8 +222,8 @@ onMounted(async () => {
 						@error="imageError = true"
 					/>
 					<div v-else class="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground">
-						<PhCameraSlash variant="duotone" :size="40" class="text-red-400/40" />
-						<span class="text-xs">No frames captured yet</span>
+						<PhCameraSlash variant="duotone" :size="80" class="text-red-400/40" />
+						<span class="text-sm">No frames captured yet</span>
 					</div>
 				</div>
 
@@ -177,7 +236,7 @@ onMounted(async () => {
 			<!-- Right column -->
 			<div class="space-y-4">
 				<!-- Camera info -->
-				<div class="border rounded-lg bg-zinc-900 p-4 space-y-3">
+				<div class="border rounded-lg bg-zinc-100 dark:bg-zinc-900 p-4 space-y-3">
 					<h2 class="text-sm font-medium flex items-center gap-2">
 						<PhCamera variant="duotone" :size="18" class="text-zinc-400" />
 						Camera
@@ -196,7 +255,7 @@ onMounted(async () => {
 				</div>
 
 				<!-- Statistics -->
-				<div class="border rounded-lg bg-zinc-900 p-4 space-y-3">
+				<div class="border rounded-lg bg-zinc-100 dark:bg-zinc-900 p-4 space-y-3">
 					<h2 class="text-sm font-medium flex items-center gap-2">
 						<PhCalendar variant="duotone" :size="18" class="text-zinc-400" />
 						Statistics
@@ -226,9 +285,11 @@ onMounted(async () => {
 						<div class="flex justify-between">
 							<dt class="text-muted-foreground flex items-center gap-1.5">
 								<PhPlay variant="duotone" :size="14" />
-								Started
+								{{ isScheduled ? 'Scheduled for' : 'Started' }}
 							</dt>
-							<dd class="font-medium">{{ formatDate(timelapse.started_at) }}</dd>
+							<dd class="font-medium" :class="{ 'text-indigo-300': isScheduled }">
+								{{ formatDate(timelapse.started_at) }}
+							</dd>
 						</div>
 						<div v-if="timelapse.ended_at" class="flex justify-between">
 							<dt class="text-muted-foreground flex items-center gap-1.5">

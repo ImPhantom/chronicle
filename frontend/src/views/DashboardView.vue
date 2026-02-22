@@ -26,11 +26,17 @@ onMounted(async () => {
 	await fetchData()
 })
 
-const statusMeta: Record<TimelapseStatus, { dot: string; pill: string; label: string }> = {
+const statusMeta: Record<TimelapseStatus | 'scheduled', { dot: string; pill: string; label: string }> = {
 	pending: { dot: 'bg-zinc-400', pill: 'bg-zinc-700/70 text-zinc-300', label: 'Pending' },
+	scheduled: { dot: 'bg-indigo-400', pill: 'bg-indigo-950/70 text-indigo-300', label: 'Scheduled' },
 	running: { dot: 'bg-emerald-400', pill: 'bg-emerald-950/70 text-emerald-300', label: 'Running' },
 	paused: { dot: 'bg-amber-400', pill: 'bg-amber-950/70 text-amber-300', label: 'Paused' },
 	completed: { dot: 'bg-sky-400', pill: 'bg-sky-950/70 text-sky-300', label: 'Completed' },
+}
+
+function statusKey(tl: TimelapseResponse): TimelapseStatus | 'scheduled' {
+	if (tl.status === 'pending' && tl.started_at && new Date(tl.started_at) > new Date()) return 'scheduled'
+	return tl.status
 }
 
 function formatInterval(seconds: number): string {
@@ -64,7 +70,7 @@ function formatInterval(seconds: number): string {
 				<!-- Thumbnail -->
 				<div class="relative aspect-video w-full bg-zinc-500 dark:bg-zinc-800/60">
 					<!-- Fallback icon -->
-					<PhCameraSlash variant="duotone" :size="36" class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-red-400/40" />
+					<PhCameraSlash variant="duotone" :size="64" class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-red-400/40" />
 					<!-- Last frame image -->
 					<img v-if="timelapse.last_frame_id" :src="`/api/v1/frames/${timelapse.last_frame_id}/image`" class="absolute inset-0 w-full h-full object-cover" @error="(e) => ((e.currentTarget as HTMLImageElement).style.display = 'none')" />
 					<!-- Bottom gradient for legibility -->
@@ -75,9 +81,9 @@ function formatInterval(seconds: number): string {
 						<span>{{ timelapse.frame_count.toLocaleString() }}</span>
 					</div>
 					<!-- Status pill (top-right) -->
-					<div class="absolute top-2 right-2 flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium backdrop-blur-sm" :class="statusMeta[timelapse.status].pill">
-						<span class="inline-block w-1.5 h-1.5 rounded-full" :class="statusMeta[timelapse.status].dot" />
-						{{ statusMeta[timelapse.status].label }}
+					<div class="absolute top-2 right-2 flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium backdrop-blur-sm" :class="statusMeta[statusKey(timelapse)].pill">
+						<span class="inline-block w-1.5 h-1.5 rounded-full" :class="statusMeta[statusKey(timelapse)].dot" />
+						{{ statusMeta[statusKey(timelapse)].label }}
 					</div>
 				</div>
 
