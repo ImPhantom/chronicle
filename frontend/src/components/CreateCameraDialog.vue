@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/select'
 const dialogOpen = ref(false)
 const name = ref('')
+const namePlaceholder = ref('Grow Tent #1')
 const connectionType = ref<ConnectionType>('network')
 const rtspUrl = ref('')
 const deviceIndex = ref<number | null>(null)
@@ -61,6 +62,10 @@ watch(connectionType, (val) => {
 
 watch(selectedHardwareCameraIndex, (val) => {
 	deviceIndex.value = val !== '' ? Number(val) : null
+
+	// Update placeholder to match cameras name (small visual improvment)
+	const cam = hardwareCameras.value.find(c => String(c.index) === val)
+	if (cam) namePlaceholder.value = cam.name
 })
 
 watch(dialogOpen, (open) => {
@@ -145,7 +150,7 @@ async function handleSubmit() {
 				Add Camera
 			</Button>
 		</DialogTrigger>
-		<DialogContent class="sm:max-w-[425px]">
+		<DialogContent class="sm:max-w-md">
 			<form @submit.prevent="handleSubmit">
 				<DialogHeader>
 					<DialogTitle>Add Camera</DialogTitle>
@@ -153,10 +158,10 @@ async function handleSubmit() {
 						Configure a new camera source. Click save when you're done.
 					</DialogDescription>
 				</DialogHeader>
-				<div class="grid gap-4">
+				<div class="grid gap-4 mt-4">
 					<div class="grid gap-3">
 						<Label for="name-1">Name</Label>
-						<Input id="name-1" v-model="name" name="name" placeholder="Grow Tent #1" />
+						<Input id="name-1" v-model="name" name="name" :placeholder="namePlaceholder" />
 					</div>
 					<div class="grid gap-3">
 						<Label>Connection Type</Label>

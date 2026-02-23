@@ -11,17 +11,24 @@ import Input from '@/components/ui/input/Input.vue';
 import {
 	Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
+import {
+	AlertDialog, AlertDialogContent,
+	AlertDialogHeader, AlertDialogTitle, AlertDialogDescription,
+	AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import {
 	type AppSettingsResponse, type AppSettingsUpdateRequest,
 	type CameraResponse, type CaptureImageFormat, type RtspTransport,
 } from '@/types'
-import { PhCamera, PhGear } from '@phosphor-icons/vue'
+import { PhCamera, PhGear, PhTrash } from '@phosphor-icons/vue'
 import { ref, reactive, onMounted } from 'vue'
-import ConnectionTypeBadge from '@/components/ConnectionTypeBadge.vue';
+import ConnectionTypeBadge from '@/components/ConnectionTypeBadge.vue'
 
-const settings = ref<AppSettingsResponse | null>(null);
+const settings = ref<AppSettingsResponse | null>(null)
 const cameras = ref<CameraResponse[]>([])
+const cameraToDelete = ref<CameraResponse | null>(null)
+const isDeletingCamera = ref(false)
 
 const form = reactive({
 	timezone: '',
@@ -46,6 +53,25 @@ const fetchCameras = async () => {
 	} catch {
 		cameras.value = []
 	}
+}
+
+const deleteCamera = async () => {
+	if (isDeletingCamera.value) return
+	if (!cameraToDelete.value) return
+	isDeletingCamera.value = true
+	try {
+		const res = await fetch(`/api/v1/cameras/${cameraToDelete.value.id}`, { method: 'DELETE' })
+		if (res.ok) {
+			cameras.value = cameras.value.filter(cam => cam.id !== cameraToDelete.value?.id)
+		}
+	} finally {
+		isDeletingCamera.value = false
+		cameraToDelete.value = null
+	}
+}
+
+const confirmDeleteCamera = (cam: CameraResponse) => {
+	cameraToDelete.value = cam
 }
 
 onMounted(async () => {
@@ -106,7 +132,59 @@ async function saveSettings() {
 
 <template>
 	<div>
-		<div class="flex items-center text-zinc-600 dark:text-zinc-300">
+		<div class="flex items-center text-muted-foreground">
+			<PhCamera size="32" weight="duotone" />
+			<h1 class="text-2xl font-bold tracking-wide ml-2">Cameras</h1>
+			<hr class="border-zinc-300 dark:border-zinc-700 w-full mx-4" />
+			<CreateCameraDialog v-on:camera-created="fetchCameras" />
+		</div>
+
+		<div class="p-3">
+			<div v-if="cameras.length === 0" class="flex flex-col items-center justify-center py-24 text-muted-foreground gap-2">
+				<p class="text-sm">No cameras setup yet!</p>
+			</div>
+
+			<div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+				<div v-for="cam in cameras" :key="cam.id" class="border rounded-lg px-4 py-3 bg-zinc-100 dark:bg-zinc-900">
+					<div class="flex items-center">
+						<h3 class="text-lg font-semibold">{{ cam.name }}</h3>
+						<ConnectionTypeBadge :cam="cam" />
+
+						<button 
+							class="p-0.5 ml-auto text-zinc-500 hover:text-red-500/50 transition-colors"
+							type="button"
+							:disabled="isDeletingCamera"
+							@click="confirmDeleteCamera(cam)"
+						>
+							<PhTrash size="22" weight="duotone" />
+						</button>
+					</div>
+					<p class="text-sm text-muted-foreground mb-1">ID: {{ cam.id }}</p>
+					<p v-if="cam.connection_type === 'network'" class="text-sm text-muted-foreground mb-1">URL: {{ cam.rtsp_url?.replace(/rtsp:\/\/[^@]+@/, "rtsp://") }}</p>
+					<p v-if="cam.connection_type === 'hardware'" class="text-sm text-muted-foreground mb-1">Device Index: {{ cam.device_index }}</p>
+				</div>
+
+				<AlertDialog :open="cameraToDelete !== null">
+					<AlertDialogContent>
+						<AlertDialogHeader>
+							<AlertDialogTitle>Delete camera '{{ cameraToDelete?.name }}'?</AlertDialogTitle>
+							<AlertDialogDescription>
+								Are you sure you want to delete this camera?
+								This may affect currently running timelapses!
+							</AlertDialogDescription>
+						</AlertDialogHeader>
+						<AlertDialogFooter>
+							<AlertDialogCancel @click="cameraToDelete = null">Cancel</AlertDialogCancel>
+							<AlertDialogAction @click="deleteCamera" class="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+								Delete
+							</AlertDialogAction>
+						</AlertDialogFooter>
+					</AlertDialogContent>
+				</AlertDialog>
+			</div>
+		</div>
+
+		<div class="flex items-center text-muted-foreground mt-6">
 			<PhGear size="32" weight="duotone" />
 			<h1 class="text-2xl font-bold tracking-wide ml-2">Settings</h1>
 			<hr class="border-zinc-300 dark:border-zinc-700 w-full ml-4" />
@@ -238,34 +316,5 @@ async function saveSettings() {
 				</Button>
 			</div>
 		</form>
-
-		<div class="flex items-center text-zinc-600 dark:text-zinc-300 mb-2">
-			<PhCamera size="32" weight="duotone" />
-			<h1 class="text-2xl font-bold tracking-wide ml-2">Cameras</h1>
-			<hr class="border-zinc-300 dark:border-zinc-700 w-full mx-4" />
-			<CreateCameraDialog v-on:camera-created="fetchCameras" />
-		</div>
-
-		<div class="p-3">
-			<div v-if="cameras.length === 0" class="flex flex-col items-center justify-center py-24 text-muted-foreground gap-2">
-				<p class="text-sm">No cameras setup yet!</p>
-			</div>
-
-			<div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-				<div v-for="cam in cameras" :key="cam.id" class="border rounded-lg px-4 py-3 bg-zinc-900">
-					<div class="flex items-center">
-						<h3 class="text-lg font-semibold">{{ cam.name }}</h3>
-						<ConnectionTypeBadge :cam="cam" />
-
-						<button class="p-1 ml-auto text-zinc-400 hover:text-zinc-200 transition-colors" type="button">
-							<PhGear size="20" weight="duotone" />
-						</button>
-					</div>
-					<p class="text-sm text-muted-foreground mb-1">ID: {{ cam.id }}</p>
-					<p v-if="cam.connection_type === 'network'" class="text-sm text-muted-foreground mb-1">URL: {{ cam.rtsp_url?.replace(/rtsp:\/\/[^@]+@/, "rtsp://") }}</p>
-					<p v-if="cam.connection_type === 'hardware'" class="text-sm text-muted-foreground mb-1">Device Index: {{ cam.device_index }}</p>
-				</div>
-			</div>
-		</div>
 	</div>
 </template>
