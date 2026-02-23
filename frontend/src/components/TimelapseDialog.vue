@@ -30,6 +30,7 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import type { CameraResponse, TimelapseResponse, TimelapseCreateRequest } from '@/types'
+import { PhWarning } from '@phosphor-icons/vue'
 
 const emit = defineEmits<{ 'timelapse-created': [timelapse: TimelapseResponse] }>()
 
@@ -122,6 +123,12 @@ onMounted(async () => {
 						Configure your timelapse and choose whether to start it now or queue it for later.
 					</DialogDescription>
 				</DialogHeader>
+
+				<div v-if="cameras.length == 0" class="flex items-center gap-3 px-4 py-3 mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-sm text-amber-300">
+					<PhWarning variant="duotone" :size="18" class="shrink-0 text-amber-400" />
+					<span>You must add a camera connection in the 'Settings' page before creating a timelapse!</span>
+
+				</div>
 
 				<FieldSet class="mt-4">
 					<FieldGroup>
