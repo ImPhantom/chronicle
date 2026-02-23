@@ -24,6 +24,7 @@ import {
 	PhTrash,
 } from '@phosphor-icons/vue'
 import TimelapseStatusDot from '@/components/TimelapseStatusDot.vue'
+import { formatBytes } from '@/lib/format'
 
 const timelapse = ref<TimelapseResponse | null>(null)
 const camera = ref<CameraResponse | null>(null)
@@ -303,7 +304,7 @@ onMounted(async () => {
 								<PhHardDrive variant="duotone" :size="14" />
 								Disk usage
 							</dt>
-							<dd class="font-medium text-muted-foreground text-xs">N/A — not tracked</dd>
+							<dd class="font-medium">{{ formatBytes(timelapse.size_bytes) }}</dd>
 						</div>
 					</dl>
 				</div>

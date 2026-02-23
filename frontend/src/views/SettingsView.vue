@@ -17,18 +17,28 @@ import {
 	AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import {
-	type AppSettingsResponse, type AppSettingsUpdateRequest,
-	type CameraResponse, type CaptureImageFormat, type RtspTransport,
+import type {
+	AppSettingsResponse, AppSettingsUpdateRequest,
+	CameraResponse, CaptureImageFormat, RtspTransport,
+	StorageStats, TimelapseResponse,
 } from '@/types'
-import { PhCamera, PhGear, PhTrash } from '@phosphor-icons/vue'
-import { ref, reactive, onMounted } from 'vue'
+import { PhCamera, PhGear, PhHardDrive, PhTrash } from '@phosphor-icons/vue'
+import { ref, reactive, onMounted, computed } from 'vue'
+import { formatBytes } from '@/lib/format'
+
 import ConnectionTypeBadge from '@/components/ConnectionTypeBadge.vue'
 
 const settings = ref<AppSettingsResponse | null>(null)
 const cameras = ref<CameraResponse[]>([])
 const cameraToDelete = ref<CameraResponse | null>(null)
 const isDeletingCamera = ref(false)
+const storageStats = ref<StorageStats | null>(null)
+const timelapses = ref<TimelapseResponse[]>([])
+
+const usedPercent = computed(() => {
+	if (!storageStats.value || storageStats.value.total_bytes === 0) return 0
+	return (storageStats.value.used_bytes / storageStats.value.total_bytes) * 100
+})
 
 const form = reactive({
 	timezone: '',
@@ -77,6 +87,19 @@ const confirmDeleteCamera = (cam: CameraResponse) => {
 onMounted(async () => {
 	settings.value = await fetch('/api/v1/settings').then(res => res.json())
 	await fetchCameras()
+
+	// i know this is bad, no time to clean it up at the moment
+	// TODO: consolidate all API calls into named functions in lib/api/ with a wrapper around our fetch logic.
+	try {
+		storageStats.value = await fetch('/api/v1/settings/storage').then(res => res.json())
+	} catch {
+		storageStats.value = null
+	}
+	try {
+		timelapses.value = await fetch('/api/v1/timelapses').then(res => res.json())
+	} catch {
+		timelapses.value = []
+	}
 
 	if (settings.value) {
 		const s = settings.value
@@ -182,6 +205,53 @@ async function saveSettings() {
 					</AlertDialogContent>
 				</AlertDialog>
 			</div>
+		</div>
+
+		<!-- TODO: Improve the look of this section? -->
+		<!-- Maybe only show the top 3-5 largest timelapses, and make the section collapsible -->
+		<div class="flex items-center text-muted-foreground mt-6">
+			<PhHardDrive size="32" weight="duotone" />
+			<h1 class="text-2xl font-bold tracking-wide ml-2">Storage</h1>
+			<hr class="border-zinc-300 dark:border-zinc-700 w-full ml-4" />
+		</div>
+
+		<div class="p-3">
+			<div v-if="storageStats" class="mb-4">
+				<div class="flex justify-between text-sm text-muted-foreground mb-1">
+					<span>{{ formatBytes(storageStats.used_bytes) }} used</span>
+					<span>{{ formatBytes(storageStats.free_bytes) }} free of {{ formatBytes(storageStats.total_bytes) }}</span>
+				</div>
+				<div class="w-full h-2 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden">
+					<div
+						class="h-full rounded-full bg-primary transition-all"
+						:style="{ width: `${usedPercent.toFixed(1)}%` }"
+					/>
+				</div>
+			</div>
+
+			<div v-if="timelapses.length > 0" class="mt-3">
+				<table class="w-full text-sm">
+					<thead>
+						<tr class="text-left text-muted-foreground border-b border-zinc-200 dark:border-zinc-700">
+							<th class="pb-1 font-medium">Timelapse</th>
+							<th class="pb-1 font-medium text-right">Frames</th>
+							<th class="pb-1 font-medium text-right">Size</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr
+							v-for="tl in timelapses"
+							:key="tl.id"
+							class="border-b border-zinc-100 dark:border-zinc-800 last:border-0"
+						>
+							<td class="py-1.5">{{ tl.name }}</td>
+							<td class="py-1.5 text-right text-muted-foreground">{{ tl.frame_count.toLocaleString() }}</td>
+							<td class="py-1.5 text-right text-muted-foreground">{{ formatBytes(tl.size_bytes) }}</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+			<div v-else class="text-sm text-muted-foreground py-4 text-center">No timelapses yet.</div>
 		</div>
 
 		<div class="flex items-center text-muted-foreground mt-6">

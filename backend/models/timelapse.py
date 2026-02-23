@@ -28,6 +28,7 @@ class Timelapse(Base):
     )
     started_at: Mapped[datetime.datetime | None] = mapped_column(UTCDateTime, nullable=True)
     ended_at: Mapped[datetime.datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     created_at: Mapped[datetime.datetime] = mapped_column(
         UTCDateTime, server_default=func.now(), nullable=False # pylint: disable=not-callable
     )

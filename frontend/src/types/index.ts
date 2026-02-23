@@ -54,6 +54,7 @@ export interface TimelapseResponse {
 	created_at: string;
 	last_frame_id: number | null;
 	frame_count: number;
+	size_bytes: number;
 }
 
 export interface TimelapseCreateRequest {
@@ -90,6 +91,14 @@ export interface FrameCreateRequest {
 
 export interface FrameUpdateRequest {
 	file_path?: string;
+}
+
+// ── Storage ────────────────────────────────────────────────────────────────────
+
+export interface StorageStats {
+	total_bytes: number;
+	used_bytes: number;
+	free_bytes: number;
 }
 
 // ── Settings ───────────────────────────────────────────────────────────────────

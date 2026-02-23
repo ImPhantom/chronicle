@@ -152,6 +152,7 @@ def _do_sync_capture(timelapse_id: int) -> bool:
         with open(file_path, "wb") as fh:
             fh.write(data)
 
+        timelapse.size_bytes += len(data)
         frame = Frame(timelapse_id=timelapse_id, file_path=file_path)
         db.add(frame)
         db.commit()

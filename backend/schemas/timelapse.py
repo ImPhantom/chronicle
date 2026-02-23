@@ -32,5 +32,6 @@ class Timelapse(TimelapseBase):
     created_at: datetime.datetime
     last_frame_id: Optional[int] = None
     frame_count: int = 0
+    size_bytes: int = 0
 
     model_config = {"from_attributes": True}

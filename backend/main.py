@@ -2,8 +2,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
 import datetime
+import os
 
 import capture_manager
 import models  # noqa: F401 — ensures all models are registered with Base.metadata
@@ -19,6 +19,7 @@ async def lifespan(app: FastAPI):
     db = SessionLocal()
     try:
         settings = _ensure_settings_row(db)
+        os.makedirs(settings.storage_path, exist_ok=True)
         capture_manager.scheduler.configure(timezone=settings.timezone)
         capture_manager.scheduler.start()
         # Re-start any timelapses that were running when the server last shut down.
