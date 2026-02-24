@@ -25,6 +25,9 @@ import {
 } from '@phosphor-icons/vue'
 import TimelapseStatusDot from '@/components/TimelapseStatusDot.vue'
 import { formatBytes } from '@/lib/format'
+import { deleteTimelapse, getTimelapse, updateTimelapse } from '@/api/timelapse'
+import { getCamera } from '@/api/camera'
+import { getFrame } from '@/api/frame'
 
 const timelapse = ref<TimelapseResponse | null>(null)
 const camera = ref<CameraResponse | null>(null)
@@ -61,25 +64,23 @@ async function updateStatus(newStatus: TimelapseStatus) {
 		if (newStatus === 'completed') {
 			body.ended_at = new Date().toISOString()
 		}
-		const res = await fetch(`/api/v1/timelapses/${timelapse.value.id}`, {
-			method: 'PATCH',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(body),
-		})
-		if (res.ok) {
-			timelapse.value = await res.json()
-		}
+
+		const _tl = await updateTimelapse(timelapse.value.id, body)
+		timelapse.value = _tl
+	} catch (err) {
+		console.error('Failed to update timelapse status:', err)
+		timelapse.value = null
 	} finally {
 		isUpdating.value = false
 	}
 }
 
-async function deleteTimelapse() {
+async function doTimelapseDelete() {
 	if (!timelapse.value) return
 	isDeleting.value = true
 	try {
-		const res = await fetch(`/api/v1/timelapses/${timelapse.value.id}`, { method: 'DELETE' })
-		if (res.ok) router.push('/')
+		await deleteTimelapse(timelapse.value.id)
+		router.push('/')
 	} finally {
 		isDeleting.value = false
 	}
@@ -87,13 +88,13 @@ async function deleteTimelapse() {
 
 const fetchData = async (tl: TimelapseResponse | null) => {
 	if (!tl) return
-	const [cameraRes, lastFrameRes] = await Promise.all([
-		fetch(`/api/v1/cameras/${tl.camera_id}`),
-		tl.last_frame_id ? fetch(`/api/v1/frames/${tl.last_frame_id}`) : Promise.resolve(null),
+	const [_camera, _lastFrame] = await Promise.all([
+		getCamera(tl.camera_id),
+		tl.last_frame_id ? getFrame(tl.last_frame_id) : Promise.resolve(null),
 	])
 
-	camera.value = cameraRes.ok ? await cameraRes.json() : null
-	lastFrame.value = lastFrameRes?.ok ? await lastFrameRes.json() : null
+	camera.value = _camera
+	lastFrame.value = _lastFrame
 }
 
 onMounted(async () => {
@@ -101,14 +102,13 @@ onMounted(async () => {
 		router.push('/')
 		return
 	}
-
-	const res = await fetch(`/api/v1/timelapses/${route.params.id}`)
-	if (res.ok) {
-		timelapse.value = await res.json()
+	try {
+		timelapse.value = await getTimelapse(parseInt(route.params.id as string))
 		await fetchData(timelapse.value)
-	} else {
+	} catch {
 		timelapse.value = null
 		router.push('/')
+		return
 	}
 })
 </script>
@@ -187,7 +187,7 @@ onMounted(async () => {
 						</AlertDialogHeader>
 						<AlertDialogFooter>
 							<AlertDialogCancel>Cancel</AlertDialogCancel>
-							<AlertDialogAction @click="deleteTimelapse" class="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+							<AlertDialogAction @click="doTimelapseDelete" class="bg-destructive text-destructive-foreground hover:bg-destructive/90">
 								Delete
 							</AlertDialogAction>
 						</AlertDialogFooter>

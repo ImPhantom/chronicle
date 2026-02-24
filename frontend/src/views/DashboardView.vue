@@ -4,18 +4,20 @@ import type { CameraResponse, TimelapseResponse, TimelapseStatus } from '@/types
 import TimelapseDialog from '@/components/TimelapseDialog.vue';
 import { PhCamera, PhCameraSlash, PhFilmStrip, PhTimer, PhVideoCamera } from '@phosphor-icons/vue';
 import ConnectionTypeBadge from '@/components/ConnectionTypeBadge.vue';
+import { getTimelapses } from '@/api/timelapse';
+import { getCameras } from '@/api/camera';
 
 const cameras = ref<CameraResponse[]>([])
 const timelapses = ref<TimelapseResponse[]>([])
 
 const fetchData = async () => {
 	try {
-		const [tlRes, camRes] = await Promise.all([
-			fetch('/api/v1/timelapses'),
-			fetch('/api/v1/cameras'),
+		const [tls, cams] = await Promise.all([
+			getTimelapses(),
+			getCameras(),
 		])
-		timelapses.value = await tlRes.json()
-		cameras.value = await camRes.json()
+		timelapses.value = tls
+		cameras.value = cams
 	} catch {
 		timelapses.value = []
 		cameras.value = []

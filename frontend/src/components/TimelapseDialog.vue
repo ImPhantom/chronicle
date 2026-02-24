@@ -31,6 +31,8 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import type { CameraResponse, TimelapseResponse, TimelapseCreateRequest } from '@/types'
 import { PhWarning } from '@phosphor-icons/vue'
+import { createTimelapse } from '@/api/timelapse'
+import { getCameras } from '@/api/camera'
 
 const emit = defineEmits<{ 'timelapse-created': [timelapse: TimelapseResponse] }>()
 
@@ -84,18 +86,7 @@ async function handleSubmit() {
 				: (scheduledEnd.value ? new Date(scheduledEnd.value).toISOString() : null),
 		}
 
-		const res = await fetch('/api/v1/timelapses', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(payload),
-		})
-
-		if (!res.ok) {
-			const data = await res.json().catch(() => null)
-			throw new Error(data?.detail ?? `Request failed (${res.status})`)
-		}
-
-		const timelapse: TimelapseResponse = await res.json()
+		const timelapse = await createTimelapse(payload)
 		emit('timelapse-created', timelapse)
 		dialogOpen.value = false
 	} catch (err) {
@@ -106,7 +97,10 @@ async function handleSubmit() {
 }
 
 onMounted(async () => {
-	cameras.value = await fetch('/api/v1/cameras').then(res => res.json())
+	cameras.value = await getCameras().catch(err =>  {
+		console.error('failed to fetch cameras!', err)
+		return []
+	})
 })
 </script>
 

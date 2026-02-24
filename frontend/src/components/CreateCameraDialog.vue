@@ -14,8 +14,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type { CameraCreateRequest, CameraResponse, ConnectionType, HardwareCameraInfo, TestCaptureRequest } from '@/types'
-
-const emit = defineEmits<{ 'camera-created': [camera: CameraResponse] }>()
 import {
   Select,
   SelectContent,
@@ -23,6 +21,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { createCamera, getHardwareCameras, testCamera } from '@/api/camera'
+
+const emit = defineEmits<{ 'camera-created': [camera: CameraResponse] }>()
+
 const dialogOpen = ref(false)
 const name = ref('')
 const namePlaceholder = ref('Grow Tent #1')
@@ -45,8 +47,7 @@ const submitError = ref<string | null>(null)
 
 async function fetchHardwareCameras() {
 	try {
-		const res = await fetch('/api/v1/cameras/hardware')
-		hardwareCameras.value = await res.json()
+		hardwareCameras.value = await getHardwareCameras()
 		if (hardwareCameras.value.length > 0 && hardwareCameras.value[0]) {
 			selectedHardwareCameraIndex.value = String(hardwareCameras.value[0].index)
 			deviceIndex.value = hardwareCameras.value[0].index
@@ -91,19 +92,10 @@ async function testCapture() {
 		...(isNetwork.value ? { rtsp_url: rtspUrl.value } : {}),
 		...(isHardware.value && deviceIndex.value !== null ? { device_index: deviceIndex.value } : {}),
 	}
+
 	try {
-		const res = await fetch('/api/v1/cameras/test-capture', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(payload),
-		})
-		if (!res.ok) {
-			let detail = `Capture failed (HTTP ${res.status})`
-			try { const j = await res.json(); if (j.detail) detail = j.detail } catch {}
-			testCaptureError.value = detail
-			return
-		}
-		testCaptureUrl.value = URL.createObjectURL(await res.blob())
+		const testResponse = await testCamera(payload)
+		testCaptureUrl.value = URL.createObjectURL(testResponse)
 	} catch (err) {
 		testCaptureError.value = err instanceof Error ? err.message : 'Network error'
 	} finally {
@@ -120,19 +112,9 @@ async function handleSubmit() {
 		...(isNetwork.value ? { rtsp_url: rtspUrl.value } : {}),
 		...(isHardware.value && deviceIndex.value !== null ? { device_index: deviceIndex.value } : {}),
 	}
+
 	try {
-		const res = await fetch('/api/v1/cameras', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(payload),
-		})
-		if (!res.ok) {
-			let detail = `Failed to create camera (HTTP ${res.status})`
-			try { const j = await res.json(); if (j.detail) detail = j.detail } catch {}
-			submitError.value = detail
-			return
-		}
-		const camera: CameraResponse = await res.json()
+		const camera = await createCamera(payload)
 		emit('camera-created', camera)
 		dialogOpen.value = false
 	} catch (err) {

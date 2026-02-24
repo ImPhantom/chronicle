@@ -27,6 +27,9 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { formatBytes } from '@/lib/format'
 
 import ConnectionTypeBadge from '@/components/ConnectionTypeBadge.vue'
+import { getSettings, getStorageStats, updateSettings } from '@/api/settings';
+import { getTimelapses } from '@/api/timelapse';
+import { deleteCamera, getCameras } from '@/api/camera';
 
 const settings = ref<AppSettingsResponse | null>(null)
 const cameras = ref<CameraResponse[]>([])
@@ -56,24 +59,21 @@ const form = reactive({
 const isSaving = ref(false)
 const saveError = ref<string | null>(null)
 
-const fetchCameras = async () => {
-	try {
-		const res = await fetch('/api/v1/cameras')
-		cameras.value = await res.json()
-	} catch {
+// This is split off so it can be triggered by CreateCameraDialog's event
+const refreshCameras = async () => 
+	await getCameras().then(_cams => cameras.value = _cams).catch(err => {
+		console.error('failed to fetch cameras!', err)
 		cameras.value = []
-	}
-}
+	})
 
-const deleteCamera = async () => {
+const doCameraDelete = async () => {
 	if (isDeletingCamera.value) return
 	if (!cameraToDelete.value) return
 	isDeletingCamera.value = true
 	try {
-		const res = await fetch(`/api/v1/cameras/${cameraToDelete.value.id}`, { method: 'DELETE' })
-		if (res.ok) {
-			cameras.value = cameras.value.filter(cam => cam.id !== cameraToDelete.value?.id)
-		}
+		await deleteCamera(cameraToDelete.value.id)
+		// Remove from local array instead of another fetch
+		cameras.value = cameras.value.filter(cam => cam.id !== cameraToDelete.value?.id)
 	} finally {
 		isDeletingCamera.value = false
 		cameraToDelete.value = null
@@ -85,19 +85,22 @@ const confirmDeleteCamera = (cam: CameraResponse) => {
 }
 
 onMounted(async () => {
-	settings.value = await fetch('/api/v1/settings').then(res => res.json())
-	await fetchCameras()
-
-	// i know this is bad, no time to clean it up at the moment
-	// TODO: consolidate all API calls into named functions in lib/api/ with a wrapper around our fetch logic.
 	try {
-		storageStats.value = await fetch('/api/v1/settings/storage').then(res => res.json())
-	} catch {
+		const [_settings, _storageStats, _timelapses] = await Promise.all([
+			getSettings(),
+			getStorageStats(),
+			getTimelapses(),
+			refreshCameras(),
+		]);
+		
+		settings.value = _settings
+		storageStats.value = _storageStats
+		timelapses.value = _timelapses
+		// No need to set 'cameras', 'refreshCameras' already does so.
+	} catch (err) {
+		console.error('Failed to fetch data from API:', err)
+		settings.value = null
 		storageStats.value = null
-	}
-	try {
-		timelapses.value = await fetch('/api/v1/timelapses').then(res => res.json())
-	} catch {
 		timelapses.value = []
 	}
 
@@ -134,17 +137,8 @@ async function saveSettings() {
 	}
 
 	try {
-		const res = await fetch('/api/v1/settings', {
-			method: 'PATCH',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(payload),
-		})
-		if (!res.ok) {
-			const data = await res.json().catch(() => null)
-			saveError.value = data?.detail ?? `Error ${res.status}`
-		} else {
-			settings.value = await res.json()
-		}
+		const _settings = await updateSettings(payload)
+		settings.value = _settings
 	} catch (e) {
 		saveError.value = e instanceof Error ? e.message : 'Unknown error'
 	} finally {
@@ -159,7 +153,7 @@ async function saveSettings() {
 			<PhCamera size="32" weight="duotone" />
 			<h1 class="text-2xl font-bold tracking-wide ml-2">Cameras</h1>
 			<hr class="border-zinc-300 dark:border-zinc-700 w-full mx-4" />
-			<CreateCameraDialog v-on:camera-created="fetchCameras" />
+			<CreateCameraDialog v-on:camera-created="refreshCameras" />
 		</div>
 
 		<div class="p-3">
@@ -198,7 +192,7 @@ async function saveSettings() {
 						</AlertDialogHeader>
 						<AlertDialogFooter>
 							<AlertDialogCancel @click="cameraToDelete = null">Cancel</AlertDialogCancel>
-							<AlertDialogAction @click="deleteCamera" class="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+							<AlertDialogAction @click="doCameraDelete" class="bg-destructive text-destructive-foreground hover:bg-destructive/90">
 								Delete
 							</AlertDialogAction>
 						</AlertDialogFooter>
