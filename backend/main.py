@@ -1,9 +1,12 @@
 from contextlib import asynccontextmanager
+import os
 
 from fastapi import FastAPI
+from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 import datetime
-import os
+
+load_dotenv()
 
 import capture_manager
 import models  # noqa: F401 — ensures all models are registered with Base.metadata
@@ -54,9 +57,11 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Chronicle API", lifespan=lifespan)
 
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

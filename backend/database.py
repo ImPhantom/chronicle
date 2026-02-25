@@ -1,14 +1,18 @@
 import datetime
+import os
 
+from dotenv import load_dotenv
 from sqlalchemy import DateTime, create_engine, event
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from sqlalchemy.types import TypeDecorator
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./chronicle.db"
+load_dotenv()
+
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./chronicle.db")
 
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False},
+    DATABASE_URL,
+    connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {},
 )
 
 
