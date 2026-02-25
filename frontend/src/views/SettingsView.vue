@@ -19,42 +19,32 @@ import {
 import { Button } from '@/components/ui/button'
 import type {
 	AppSettingsResponse, AppSettingsUpdateRequest,
-	CameraResponse, CaptureImageFormat, RtspTransport,
-	StorageStats, TimelapseResponse,
+	CameraResponse, CaptureImageFormat, RtspTransport, TimelapseResponse,
 } from '@/types'
-import { PhCamera, PhGear, PhHardDrive, PhSpinner, PhTrash, PhWarningOctagon } from '@phosphor-icons/vue'
-import { ref, reactive, onMounted, computed } from 'vue'
-import { formatBytes } from '@/lib/format'
+import { PhCamera, PhGear, PhSpinner, PhTrash, PhWarningOctagon } from '@phosphor-icons/vue'
+import { ref, reactive, onMounted } from 'vue'
 
 import ConnectionTypeBadge from '@/components/ConnectionTypeBadge.vue'
-import { getSettings, getStorageStats, updateSettings } from '@/api/settings';
+import { getSettings, updateSettings } from '@/api/settings';
 import { getTimelapses } from '@/api/timelapse';
 import { deleteCamera, getCameras } from '@/api/camera';
 import BaseAlert from '@/components/BaseAlert.vue';
+import StorageSection from '@/components/settings/StorageSection.vue';
 
 const settings = ref<AppSettingsResponse | null>(null)
 const cameras = ref<CameraResponse[]>([])
 const cameraToDelete = ref<CameraResponse | null>(null)
 const isDeletingCamera = ref(false)
-const storageStats = ref<StorageStats | null>(null)
 const timelapses = ref<TimelapseResponse[]>([])
 const errorMessage = ref<string>('')
 const isLoading = ref(true)
 
-const usedPercent = computed(() => {
-	if (!storageStats.value || storageStats.value.total_bytes === 0) return 0
-	return (storageStats.value.used_bytes / storageStats.value.total_bytes) * 100
-})
-
 const form = reactive({
 	timezone: '',
 	storage_path: '',
-	max_storage_gb: '',
-	retention_days: '',
 	default_capture_interval_seconds: '',
 	capture_image_format: 'webp' as CaptureImageFormat,
 	capture_image_quality: '',
-	max_frames_per_timelapse: '',
 	ffmpeg_timeout_seconds: '',
 	ffmpeg_rtsp_transport: 'tcp' as RtspTransport,
 })
@@ -101,21 +91,18 @@ const getAssociatedCameraFiles = (cameraId?: number) => {
 onMounted(async () => {
 	isLoading.value = true
 	try {
-		const [_settings, _storageStats, _timelapses] = await Promise.all([
+		const [_settings, _timelapses, _] = await Promise.all([
 			getSettings(),
-			getStorageStats(),
 			getTimelapses(),
 			refreshCameras(),
 		]);
 		
 		settings.value = _settings
-		storageStats.value = _storageStats
 		timelapses.value = _timelapses
 		// No need to set 'cameras', 'refreshCameras' already does so.
 	} catch (err) {
 		errorMessage.value = `Failed to load data from API (${err})`
 		settings.value = null
-		storageStats.value = null
 		timelapses.value = []
 	} finally {
 		isLoading.value = false
@@ -125,12 +112,9 @@ onMounted(async () => {
 		const s = settings.value
 		form.timezone = s.timezone
 		form.storage_path = s.storage_path
-		form.max_storage_gb = s.max_storage_gb != null ? String(s.max_storage_gb) : ''
-		form.retention_days = s.retention_days != null ? String(s.retention_days) : ''
 		form.default_capture_interval_seconds = String(s.default_capture_interval_seconds)
 		form.capture_image_format = s.capture_image_format
 		form.capture_image_quality = String(s.capture_image_quality)
-		form.max_frames_per_timelapse = s.max_frames_per_timelapse != null ? String(s.max_frames_per_timelapse) : ''
 		form.ffmpeg_timeout_seconds = String(s.ffmpeg_timeout_seconds)
 		form.ffmpeg_rtsp_transport = s.ffmpeg_rtsp_transport
 	}
@@ -143,12 +127,9 @@ async function saveSettings() {
 	const payload: AppSettingsUpdateRequest = {
 		timezone: form.timezone,
 		storage_path: form.storage_path,
-		max_storage_gb: form.max_storage_gb !== '' ? Number(form.max_storage_gb) : null,
-		retention_days: form.retention_days !== '' ? Number(form.retention_days) : null,
 		default_capture_interval_seconds: Number(form.default_capture_interval_seconds),
 		capture_image_format: form.capture_image_format,
 		capture_image_quality: Number(form.capture_image_quality),
-		max_frames_per_timelapse: form.max_frames_per_timelapse !== '' ? Number(form.max_frames_per_timelapse) : null,
 		ffmpeg_timeout_seconds: Number(form.ffmpeg_timeout_seconds),
 		ffmpeg_rtsp_transport: form.ffmpeg_rtsp_transport,
 	}
@@ -169,6 +150,7 @@ async function saveSettings() {
 		<!-- Error alert -->
 		<BaseAlert :open="errorMessage !== ''" :message="errorMessage" variant="error" :icon="PhWarningOctagon" dismissible @close="errorMessage = ''" class="mb-6" />
 
+		<!-- Camera management section -->
 		<div class="flex items-center text-muted-foreground">
 			<PhCamera size="32" weight="duotone" />
 			<h1 class="text-2xl font-bold tracking-wide ml-2">Cameras</h1>
@@ -225,54 +207,10 @@ async function saveSettings() {
 			</div>
 		</div>
 
-		<!-- TODO: Improve the look of this section? -->
-		<!-- Maybe only show the top 3-5 largest timelapses, and make the section collapsible -->
-		<div class="flex items-center text-muted-foreground mt-6">
-			<PhHardDrive size="32" weight="duotone" />
-			<h1 class="text-2xl font-bold tracking-wide ml-2">Storage</h1>
-			<PhSpinner v-if="isLoading" :size="24" class="ml-3 text-zinc-700 dark:text-zinc-300 animate-spin" />
-			<hr class="border-zinc-300 dark:border-zinc-700 w-full ml-4" />
-		</div>
+		<!-- Storage overview section -->
+		<StorageSection :loading="isLoading" :timelapses="timelapses" @error="msg => errorMessage = msg" />
 
-		<div class="p-3">
-			<div v-if="storageStats" class="mb-4">
-				<div class="flex justify-between text-sm text-muted-foreground mb-1">
-					<span>{{ formatBytes(storageStats.used_bytes) }} used</span>
-					<span>{{ formatBytes(storageStats.free_bytes) }} free of {{ formatBytes(storageStats.total_bytes) }}</span>
-				</div>
-				<div class="w-full h-2 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden">
-					<div
-						class="h-full rounded-full bg-primary transition-all"
-						:style="{ width: `${usedPercent.toFixed(1)}%` }"
-					/>
-				</div>
-			</div>
-
-			<div v-if="timelapses.length > 0" class="mt-3">
-				<table class="w-full text-sm">
-					<thead>
-						<tr class="text-left text-muted-foreground border-b border-zinc-200 dark:border-zinc-700">
-							<th class="pb-1 font-medium">Timelapse</th>
-							<th class="pb-1 font-medium text-right">Frames</th>
-							<th class="pb-1 font-medium text-right">Size</th>
-						</tr>
-					</thead>
-					<tbody>
-						<tr
-							v-for="tl in timelapses"
-							:key="tl.id"
-							class="border-b border-zinc-100 dark:border-zinc-800 last:border-0"
-						>
-							<td class="py-1.5">{{ tl.name }}</td>
-							<td class="py-1.5 text-right text-muted-foreground">{{ tl.frame_count.toLocaleString() }}</td>
-							<td class="py-1.5 text-right text-muted-foreground">{{ formatBytes(tl.size_bytes) }}</td>
-						</tr>
-					</tbody>
-				</table>
-			</div>
-			<div v-else class="text-sm text-muted-foreground py-4 text-center">No timelapses yet.</div>
-		</div>
-
+		<!-- General 'settings' section -->
 		<div class="flex items-center text-muted-foreground mt-6">
 			<PhGear size="32" weight="duotone" />
 			<h1 class="text-2xl font-bold tracking-wide ml-2">Settings</h1>
@@ -304,21 +242,6 @@ async function saveSettings() {
 								</FieldDescription>
 							</Field>
 
-							<Field>
-								<FieldLabel for="max_storage_gb">Max Storage (GB)</FieldLabel>
-								<Input id="max_storage_gb" type="number" placeholder="Unlimited" v-model="form.max_storage_gb" />
-								<FieldDescription>
-									Maximum total disk usage for stored frames. Leave blank for no limit.
-								</FieldDescription>
-							</Field>
-
-							<Field>
-								<FieldLabel for="retention_days">Retention (days)</FieldLabel>
-								<Input id="retention_days" type="number" placeholder="Forever" v-model="form.retention_days" />
-								<FieldDescription>
-									Delete frames older than this many days. Leave blank to keep forever.
-								</FieldDescription>
-							</Field>
 						</FieldGroup>
 					</FieldSet>
 				</div>
@@ -359,14 +282,6 @@ async function saveSettings() {
 								<Input id="capture_image_quality" type="number" min="1" max="100" v-model="form.capture_image_quality" />
 								<FieldDescription>
 									Compression quality for captured frames.
-								</FieldDescription>
-							</Field>
-
-							<Field>
-								<FieldLabel for="max_frames_per_timelapse">Max Frames</FieldLabel>
-								<Input id="max_frames_per_timelapse" type="number" placeholder="Unlimited" v-model="form.max_frames_per_timelapse" />
-								<FieldDescription>
-									Maximum frames stored per timelapse. Leave blank for no limit.
 								</FieldDescription>
 							</Field>
 
