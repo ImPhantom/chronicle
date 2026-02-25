@@ -17,6 +17,10 @@ const props = defineProps<{
 	storagePath?: string,
 }>()
 
+const emit = defineEmits<{
+	(e: 'error', message: string): void
+}>()
+
 const statusBadge: Record<ExportStatus, { label: string, class: string, icon: Component }> = {
 	pending:   { label: 'Pending',   class: 'bg-zinc-700/80 text-zinc-300',      icon: PhSpinner },
 	running:   { label: 'Running',   class: 'bg-cyan-800/80 text-cyan-200',      icon: PhSpinner },
@@ -64,7 +68,8 @@ async function deleteExportJob() {
 		exportJobs.value = exportJobs.value.filter(j => j.id !== exportToDelete.value?.id)
 		exportToDelete.value = null
 	} catch (err) {
-		console.error('Delete failed:', err)
+		emit('error', `Failed to delete export #${exportToDelete.value?.id}. (${err instanceof Error ? err.message : 'Unknown error'})`)
+		exportToDelete.value = null
 	}
 }
 
@@ -74,11 +79,11 @@ async function downloadExportFile(job: ExportJobResponse) {
 		const url = URL.createObjectURL(blob)
 		const a = document.createElement('a')
 		a.href = url
-		a.download = job.output_file ?? `timelapse_${job.timelapse_id}.${job.output_format}`
+		a.download = job.output_file ?? `timelapse_${job.timelapse_id}_${job.id}.${job.output_format}`
 		a.click()
 		URL.revokeObjectURL(url)
 	} catch (err) {
-		console.error('Download failed:', err)
+		emit('error', `Failed to download export #${job.id}. (${err instanceof Error ? err.message : 'Unknown error'})`)
 	}
 }
 

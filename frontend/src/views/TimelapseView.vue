@@ -90,6 +90,8 @@ async function doTimelapseDelete() {
 	try {
 		await deleteTimelapse(timelapse.value.id)
 		router.push('/')
+	} catch (err) {
+		errorMessage.value = `Failed to delete timelapse! (${err instanceof Error ? err.message : 'Unknown error'})`
 	} finally {
 		isDeleting.value = false
 	}
@@ -118,8 +120,7 @@ onMounted(async () => {
 		timelapse.value = await getTimelapse(id)
 		await fetchData(timelapse.value)
 	} catch {
-		timelapse.value = null
-		router.push('/')
+		router.push('/?error=timelapse_not_found')
 		return
 	}
 })
@@ -335,7 +336,12 @@ onMounted(async () => {
 					</dl>
 				</div>
 
-				<ExportSection ref="exportSection" :timelapse-id="timelapse.id" :storage-path="settings?.storage_path" />
+				<ExportSection 
+					ref="exportSection"
+					:timelapse-id="timelapse.id"
+					:storage-path="settings?.storage_path"
+					@error="(msg) => errorMessage = msg"
+				/>
 			</div>
 		</div>
 	</div>

@@ -143,7 +143,7 @@ async function handleSubmit() {
 				<Button variant="outline" @click="open = false">Cancel</Button>
 				<Button :disabled="isSubmitting" @click="handleSubmit">
 					<PhSpinner v-if="isSubmitting" variant="duotone" class="animate-spin" />
-					Start Export
+					{{ isSubmitting ? 'Exporting...' : 'Start Export' }}
 				</Button>
 			</DialogFooter>
 		</DialogContent>

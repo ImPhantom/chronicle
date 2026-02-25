@@ -7,11 +7,14 @@ import ConnectionTypeBadge from '@/components/ConnectionTypeBadge.vue';
 import { getTimelapses } from '@/api/timelapse';
 import { getCameras } from '@/api/camera';
 import BaseAlert from '@/components/BaseAlert.vue';
+import { useRoute } from 'vue-router';
 
 const cameras = ref<CameraResponse[]>([])
 const timelapses = ref<TimelapseResponse[]>([])
 const isLoading = ref(true)
 const errorMessage = ref<string>('')
+
+const route = useRoute()
 
 const fetchData = async () => {
 	isLoading.value = true
@@ -33,6 +36,17 @@ const fetchData = async () => {
 
 onMounted(async () => {
 	await fetchData()
+
+	// handle errors passed by other pages/components
+	if (route.query.error) {
+		switch (route.query.error) {
+			case 'timelapse_not_found':
+				errorMessage.value = 'The timelapse you requested could not be found!'
+				break
+			default:
+				errorMessage.value = String(route.query.error)
+		}
+	}
 })
 
 const statusMeta: Record<TimelapseStatus | 'scheduled', { dot: string; pill: string; label: string }> = {
