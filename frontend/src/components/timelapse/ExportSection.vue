@@ -31,7 +31,48 @@ const statusBadge: Record<ExportStatus, { label: string, class: string, icon: Co
 const exportJobs = ref<ExportJobResponse[]>([])
 const openStates = ref<Record<number, boolean>>({})
 const exportToDelete = ref<ExportJobResponse | null>(null)
-let exportPollTimer: ReturnType<typeof setInterval> | null = null
+
+// Smarter polling logic with 'exponential backoff' on errors, to avoid curb-stomping the server while its already struggling
+let exportPollTimer: ReturnType<typeof setTimeout> | null = null
+let pollErrorCount = 0
+const MAX_POLL_ERRORS = 5
+const BASE_POLL_INTERVAL = 1000
+
+function schedulePoll(delayMs: number) {
+	exportPollTimer = setTimeout(pollOnce, delayMs)
+}
+
+async function pollOnce() {
+	const active = exportJobs.value.filter(j => j.status === 'pending' || j.status === 'running')
+	if (active.length === 0) {
+		exportPollTimer = null
+		pollErrorCount = 0
+		return
+	}
+	let hadError = false
+	for (const job of active) {
+		try {
+			const updated = await getExportStatus(job.id)
+			const idx = exportJobs.value.findIndex(j => j.id === job.id)
+			if (idx !== -1) exportJobs.value[idx] = updated
+			pollErrorCount = 0
+		} catch {
+			hadError = true
+		}
+	}
+	if (hadError) {
+		pollErrorCount++
+		if (pollErrorCount >= MAX_POLL_ERRORS) {
+			exportPollTimer = null
+			emit('error', 'Lost connection to server while polling exports. Refresh to resume.')
+			return
+		}
+		const backoff = Math.min(BASE_POLL_INTERVAL * 2 ** pollErrorCount, 30000)
+		schedulePoll(backoff)
+	} else {
+		schedulePoll(BASE_POLL_INTERVAL)
+	}
+}
 
 function onJobStarted(job: ExportJobResponse) {
 	exportJobs.value.unshift(job)
@@ -40,25 +81,7 @@ function onJobStarted(job: ExportJobResponse) {
 
 function startExportPolling() {
 	if (exportPollTimer !== null) return
-	exportPollTimer = setInterval(async () => {
-		const active = exportJobs.value.filter(
-			j => j.status === 'pending' || j.status === 'running'
-		)
-		if (active.length === 0) {
-			clearInterval(exportPollTimer!)
-			exportPollTimer = null
-			return
-		}
-		for (const job of active) {
-			try {
-				const updated = await getExportStatus(job.id)
-				const idx = exportJobs.value.findIndex(j => j.id === job.id)
-				if (idx !== -1) exportJobs.value[idx] = updated
-			} catch {
-				// network hiccup — keep polling
-			}
-		}
-	}, 1000)
+	schedulePoll(BASE_POLL_INTERVAL)
 }
 
 async function deleteExportJob() {
@@ -100,7 +123,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
 	if (exportPollTimer !== null) {
-		clearInterval(exportPollTimer)
+		clearTimeout(exportPollTimer)
 		exportPollTimer = null
 	}
 })
