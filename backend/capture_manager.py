@@ -2,6 +2,7 @@ import asyncio
 import datetime
 import logging
 import os
+import shutil
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.date import DateTrigger
@@ -144,6 +145,14 @@ def _do_sync_capture(timelapse_id: int) -> bool:
 
         ext = _FORMAT_EXT.get(fmt, "webp")
         frame_dir = os.path.join(settings.storage_path, f"timelapse_{timelapse_id}")
+        usage = shutil.disk_usage(settings.storage_path)
+        MIN_FREE_BYTES = 100 * 1024 * 1024  # 100 MB
+        if usage.free < MIN_FREE_BYTES:
+            logger.warning(
+                "Low disk space: %d MB free — skipping frame for timelapse %d",
+                usage.free // (1024 * 1024), timelapse_id,
+            )
+            return False
         os.makedirs(frame_dir, exist_ok=True)
         timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%S_%f")
         filename = f"frame_{timestamp}.{ext}"
