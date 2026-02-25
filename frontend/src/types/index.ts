@@ -132,3 +132,34 @@ export interface AppSettingsUpdateRequest {
 	max_frames_per_timelapse?: number | null;
 	retention_days?: number | null;
 }
+
+// ── Export ─────────────────────────────────────────────────────────────────────
+
+export type ExportStatus     = "pending" | "running" | "completed" | "error"
+export type OutputFormat     = "webm" | "mp4"
+export type ExportResolution = "original" | "1920x1080" | "1280x720" | "640x360" | "custom"
+
+export interface ExportRequest {
+	output_format:      OutputFormat
+	output_fps:         number
+	resolution:         ExportResolution
+	custom_resolution?: string | null
+	crf:                number
+}
+
+export interface ExportJobResponse {
+	id:            number
+	timelapse_id:  number
+	status:        ExportStatus
+	output_format: OutputFormat
+	output_fps:    number
+	resolution:    string
+	crf:           number
+	total_frames:  number
+	frames_done:   number
+	progress_pct:  number
+	output_file:   string | null
+	error_message: string | null
+	created_at:    string
+	completed_at:  string | null
+}

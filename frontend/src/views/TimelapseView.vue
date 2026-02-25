@@ -24,10 +24,14 @@ import {
 	PhTrash,
 } from '@phosphor-icons/vue'
 import TimelapseStatusDot from '@/components/TimelapseStatusDot.vue'
+import ExportDialog from '@/components/ExportDialog.vue'
 import { formatBytes } from '@/lib/format'
 import { deleteTimelapse, getTimelapse, updateTimelapse } from '@/api/timelapse'
 import { getCamera } from '@/api/camera'
 import { getFrame } from '@/api/frame'
+import ExportSection from '@/components/timelapse/ExportSection.vue'
+
+const exportSection = ref<InstanceType<typeof ExportSection> | null>(null)
 
 const timelapse = ref<TimelapseResponse | null>(null)
 const camera = ref<CameraResponse | null>(null)
@@ -102,8 +106,9 @@ onMounted(async () => {
 		router.push('/')
 		return
 	}
+	const id = parseInt(route.params.id as string)
 	try {
-		timelapse.value = await getTimelapse(parseInt(route.params.id as string))
+		timelapse.value = await getTimelapse(id)
 		await fetchData(timelapse.value)
 	} catch {
 		timelapse.value = null
@@ -169,6 +174,14 @@ onMounted(async () => {
 					<span class="text-sm text-muted-foreground">Completed</span>
 				</template>
 
+				<!-- Export (shown when frames exist) -->
+				<ExportDialog
+					v-if="timelapse.frame_count > 0"
+					:timelapse-id="timelapse.id"
+					:frame-count="timelapse.frame_count"
+					@job-started="(job) => exportSection?.onJobStarted(job)"
+				/>
+
 				<!-- Delete (always shown) -->
 				<AlertDialog>
 					<AlertDialogTrigger as-child>
@@ -209,7 +222,7 @@ onMounted(async () => {
 		<!-- Main content grid -->
 		<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
 			<!-- Last frame (left, 2 cols) -->
-			<div class="lg:col-span-2 border rounded-lg bg-zinc-100 dark:bg-zinc-900 p-4 space-y-3">
+			<div class="lg:col-span-2 self-start border rounded-lg bg-zinc-100 dark:bg-zinc-900 p-4 space-y-3">
 				<h2 class="text-sm font-medium flex items-center gap-2">
 					<PhImages variant="duotone" :size="18" class="text-zinc-400" />
 					Last Frame
@@ -308,6 +321,8 @@ onMounted(async () => {
 						</div>
 					</dl>
 				</div>
+
+				<ExportSection ref="exportSection" :timelapse-id="timelapse.id" />
 			</div>
 		</div>
 	</div>
