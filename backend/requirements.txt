@@ -1,8 +1,10 @@
 fastapi==0.115.6
-tzdata
+tzdata==2025.3
 uvicorn[standard]==0.34.0
 sqlalchemy==2.0.37
 pydantic==2.10.5
-opencv-python-headless
-cv2-enumerate-cameras
-apscheduler
+opencv-python-headless==4.13.0.92
+cv2-enumerate-cameras==1.3.3
+apscheduler==3.11.2
+python-dotenv==1.2.1
+alembic==1.18.4

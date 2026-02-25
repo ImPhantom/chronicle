@@ -1,6 +1,7 @@
+import os
 import shutil
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -38,8 +39,11 @@ def read_settings(settings: AppSettingsModel = Depends(get_settings)):
 
 @router.patch("", response_model=AppSettings)
 def update_settings(payload: AppSettingsUpdate, db: Session = Depends(get_db)):
+    field_dict = payload.model_dump(exclude_unset=True)
+    if "storage_path" in field_dict and not os.path.isdir(field_dict["storage_path"]):
+        raise HTTPException(status_code=422, detail="storage_path does not exist or is not a directory")
     settings = _ensure_settings_row(db)
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    for field, value in field_dict.items():
         setattr(settings, field, value)
     db.commit()
     db.refresh(settings)
@@ -48,5 +52,8 @@ def update_settings(payload: AppSettingsUpdate, db: Session = Depends(get_db)):
 
 @router.get("/storage", response_model=StorageStats)
 def read_storage(settings: AppSettingsModel = Depends(get_settings)):
-    usage = shutil.disk_usage(settings.storage_path)
+    try:
+        usage = shutil.disk_usage(settings.storage_path)
+    except OSError as e:
+        raise HTTPException(status_code=500, detail=f"Storage path inaccessible: {e}")
     return StorageStats(total_bytes=usage.total, used_bytes=usage.used, free_bytes=usage.free)

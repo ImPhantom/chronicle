@@ -127,11 +127,11 @@ def delete_export(job_id: int, db: Session = Depends(get_db)):
     db.commit()
 
 
-@router.get("/list/{timelapse_id}")
+@router.get("/list/{timelapse_id}", response_model=list[ExportJobResponse])
 def list_exports_for_timelapse(timelapse_id: int, db: Session = Depends(get_db)):
-	timelapse = db.get(Timelapse, timelapse_id)
-	if timelapse is None:
-		raise HTTPException(status_code=404, detail="Timelapse not found")
+    timelapse = db.get(Timelapse, timelapse_id)
+    if timelapse is None:
+        raise HTTPException(status_code=404, detail="Timelapse not found")
 
-	jobs = db.query(ExportJob).filter(ExportJob.timelapse_id == timelapse_id).order_by(ExportJob.created_at.desc()).all()
-	return [ExportJobResponse.from_job(job) for job in jobs]
+    jobs = db.query(ExportJob).filter(ExportJob.timelapse_id == timelapse_id).order_by(ExportJob.created_at.desc()).all()
+    return [ExportJobResponse.from_job(job) for job in jobs]

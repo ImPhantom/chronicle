@@ -19,7 +19,7 @@ class ExportJob(Base):
 
     id:                Mapped[int]                      = mapped_column(primary_key=True, index=True)
     timelapse_id:      Mapped[int]                      = mapped_column(ForeignKey("timelapses.id", ondelete="CASCADE"), nullable=False, index=True)
-    status:            Mapped[ExportStatus]             = mapped_column(Enum(ExportStatus), default=ExportStatus.pending, nullable=False)
+    status:            Mapped[ExportStatus]             = mapped_column(Enum(ExportStatus), default=ExportStatus.pending, nullable=False, index=True)
     output_format:     Mapped[str]                      = mapped_column(String, nullable=False)   # "webm" | "mp4"
     output_fps:        Mapped[int]                      = mapped_column(Integer, nullable=False)
     resolution:        Mapped[str]                      = mapped_column(String, nullable=False)   # "original" | "1920x1080" | ...

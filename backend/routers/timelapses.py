@@ -50,7 +50,7 @@ def create_timelapse(payload: TimelapseCreate, db: Session = Depends(get_db)):
 
 
 @router.patch("/{timelapse_id}", response_model=Timelapse)
-async def update_timelapse(
+def update_timelapse(
     timelapse_id: int, payload: TimelapseUpdate, db: Session = Depends(get_db)
 ):
     timelapse = db.get(TimelapseModel, timelapse_id)

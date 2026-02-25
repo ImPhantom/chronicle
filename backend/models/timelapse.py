@@ -24,7 +24,7 @@ class Timelapse(Base):
     name: Mapped[str] = mapped_column(String, nullable=False)
     interval_seconds: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[TimelapseStatus] = mapped_column(
-        Enum(TimelapseStatus), default=TimelapseStatus.pending, nullable=False
+        Enum(TimelapseStatus), default=TimelapseStatus.pending, nullable=False, index=True
     )
     started_at: Mapped[datetime.datetime | None] = mapped_column(UTCDateTime, nullable=True)
     ended_at: Mapped[datetime.datetime | None] = mapped_column(UTCDateTime, nullable=True)
