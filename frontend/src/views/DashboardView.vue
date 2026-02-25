@@ -2,15 +2,19 @@
 import { ref, onMounted } from 'vue'
 import type { CameraResponse, TimelapseResponse, TimelapseStatus } from '@/types'
 import TimelapseDialog from '@/components/TimelapseDialog.vue';
-import { PhCamera, PhCameraSlash, PhFilmStrip, PhTimer, PhVideoCamera } from '@phosphor-icons/vue';
+import { PhCamera, PhCameraSlash, PhFilmStrip, PhSpinner, PhTimer, PhVideoCamera, PhWarningOctagon, PhX } from '@phosphor-icons/vue';
 import ConnectionTypeBadge from '@/components/ConnectionTypeBadge.vue';
 import { getTimelapses } from '@/api/timelapse';
 import { getCameras } from '@/api/camera';
+import BaseAlert from '@/components/BaseAlert.vue';
 
 const cameras = ref<CameraResponse[]>([])
 const timelapses = ref<TimelapseResponse[]>([])
+const isLoading = ref(true)
+const errorMessage = ref<string>('')
 
 const fetchData = async () => {
+	isLoading.value = true
 	try {
 		const [tls, cams] = await Promise.all([
 			getTimelapses(),
@@ -18,9 +22,12 @@ const fetchData = async () => {
 		])
 		timelapses.value = tls
 		cameras.value = cams
-	} catch {
+	} catch (err) {
+		errorMessage.value = `Failed to load timelapses. (${err})`
 		timelapses.value = []
 		cameras.value = []
+	} finally {
+		isLoading.value = false
 	}
 }
 
@@ -53,13 +60,19 @@ function formatInterval(seconds: number): string {
 <template>
 	<div>
 		<div class="flex items-center justify-between mb-6">
-			<h1 class="text-2xl font-semibold">Active Timelapses</h1>
+			<div class="flex items-center gap-3">
+				<h1 class="text-2xl font-semibold">Active Timelapses</h1>
+				<PhSpinner v-if="isLoading" :size="24" class="text-zinc-700 dark:text-zinc-300 animate-spin" />
+			</div>
 			<TimelapseDialog v-on:timelapse-created="fetchData" />
 		</div>
 
+		<!-- Error alert -->
+		<BaseAlert :open="errorMessage !== ''" :message="errorMessage" variant="error" :icon="PhWarningOctagon" dismissible @close="errorMessage = ''" />
+
 		<div v-if="timelapses.length === 0" class="flex flex-col items-center justify-center py-24 text-muted-foreground gap-3">
-			<PhVideoCamera :size="56" class="text-zinc-600" />
-			<p class="text-base font-medium text-zinc-400">No timelapses yet</p>
+			<PhVideoCamera :size="56" class="text-emerald-600/50" />
+			<p class="text-lg font-semibold text-foreground">No timelapses yet</p>
 			<p class="text-sm">Add a camera from the navbar to get started.</p>
 		</div>
 

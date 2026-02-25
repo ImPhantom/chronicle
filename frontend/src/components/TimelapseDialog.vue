@@ -97,10 +97,9 @@ async function handleSubmit() {
 }
 
 onMounted(async () => {
-	cameras.value = await getCameras().catch(err =>  {
-		console.error('failed to fetch cameras!', err)
-		return []
-	})
+	// silently ignore errors here - form will be unusable if no cameras anyways
+	// if backend is down, user will have seen error before opening dialog
+	cameras.value = await getCameras().catch(() => [])
 })
 </script>
 
@@ -109,7 +108,7 @@ onMounted(async () => {
 		<DialogTrigger as-child>
 			<Button>Create Timelapse</Button>
 		</DialogTrigger>
-		<DialogContent class="sm:max-w-[500px]">
+		<DialogContent class="sm:max-w-lg">
 			<form @submit.prevent="handleSubmit">
 				<DialogHeader>
 					<DialogTitle>Create Timelapse</DialogTitle>
@@ -121,15 +120,20 @@ onMounted(async () => {
 				<div v-if="cameras.length == 0" class="flex items-center gap-3 px-4 py-3 mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-sm text-amber-300">
 					<PhWarning variant="duotone" :size="18" class="shrink-0 text-amber-400" />
 					<span>You must add a camera connection in the 'Settings' page before creating a timelapse!</span>
-
 				</div>
 
 				<FieldSet class="mt-4">
 					<FieldGroup>
+						<!-- Name -->
+						<Field>
+							<FieldLabel for="name">Name</FieldLabel>
+							<Input id="name" type="text" v-model="form.name" placeholder="My Timelapse" />
+						</Field>
+
 						<!-- Camera -->
 						<Field>
 							<FieldLabel for="camera">Camera</FieldLabel>
-							<Select v-model="form.camera_id">
+							<Select v-model="form.camera_id" :disabled="cameras.length == 0">
 								<SelectTrigger id="camera">
 									<SelectValue placeholder="Select a camera" />
 								</SelectTrigger>
@@ -143,12 +147,6 @@ onMounted(async () => {
 									</SelectItem>
 								</SelectContent>
 							</Select>
-						</Field>
-
-						<!-- Name -->
-						<Field>
-							<FieldLabel for="name">Name</FieldLabel>
-							<Input id="name" type="text" v-model="form.name" placeholder="My Timelapse" />
 						</Field>
 
 						<!-- Interval -->
@@ -226,7 +224,7 @@ onMounted(async () => {
 						<DialogClose as-child>
 							<Button type="button" variant="outline" :disabled="isSubmitting">Cancel</Button>
 						</DialogClose>
-						<Button type="submit" :disabled="isSubmitting">
+						<Button type="submit" :disabled="cameras.length === 0 || isSubmitting">
 							<span v-if="isSubmitting">Saving...</span>
 							<span v-else>{{ startImmediately ? 'Create & Start' : 'Queue Timelapse' }}</span>
 						</Button>

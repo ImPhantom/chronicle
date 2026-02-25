@@ -22,7 +22,7 @@ import type {
 	CameraResponse, CaptureImageFormat, RtspTransport,
 	StorageStats, TimelapseResponse,
 } from '@/types'
-import { PhCamera, PhGear, PhHardDrive, PhTrash } from '@phosphor-icons/vue'
+import { PhCamera, PhGear, PhHardDrive, PhSpinner, PhTrash, PhWarningOctagon } from '@phosphor-icons/vue'
 import { ref, reactive, onMounted, computed } from 'vue'
 import { formatBytes } from '@/lib/format'
 
@@ -30,6 +30,7 @@ import ConnectionTypeBadge from '@/components/ConnectionTypeBadge.vue'
 import { getSettings, getStorageStats, updateSettings } from '@/api/settings';
 import { getTimelapses } from '@/api/timelapse';
 import { deleteCamera, getCameras } from '@/api/camera';
+import BaseAlert from '@/components/BaseAlert.vue';
 
 const settings = ref<AppSettingsResponse | null>(null)
 const cameras = ref<CameraResponse[]>([])
@@ -37,6 +38,8 @@ const cameraToDelete = ref<CameraResponse | null>(null)
 const isDeletingCamera = ref(false)
 const storageStats = ref<StorageStats | null>(null)
 const timelapses = ref<TimelapseResponse[]>([])
+const errorMessage = ref<string>('')
+const isLoading = ref(true)
 
 const usedPercent = computed(() => {
 	if (!storageStats.value || storageStats.value.total_bytes === 0) return 0
@@ -96,6 +99,7 @@ const getAssociatedCameraFiles = (cameraId?: number) => {
 }
 
 onMounted(async () => {
+	isLoading.value = true
 	try {
 		const [_settings, _storageStats, _timelapses] = await Promise.all([
 			getSettings(),
@@ -109,10 +113,12 @@ onMounted(async () => {
 		timelapses.value = _timelapses
 		// No need to set 'cameras', 'refreshCameras' already does so.
 	} catch (err) {
-		console.error('Failed to fetch data from API:', err)
+		errorMessage.value = `Failed to load data from API (${err})`
 		settings.value = null
 		storageStats.value = null
 		timelapses.value = []
+	} finally {
+		isLoading.value = false
 	}
 
 	if (settings.value) {
@@ -160,9 +166,13 @@ async function saveSettings() {
 
 <template>
 	<div>
+		<!-- Error alert -->
+		<BaseAlert :open="errorMessage !== ''" :message="errorMessage" variant="error" :icon="PhWarningOctagon" dismissible @close="errorMessage = ''" class="mb-6" />
+
 		<div class="flex items-center text-muted-foreground">
 			<PhCamera size="32" weight="duotone" />
 			<h1 class="text-2xl font-bold tracking-wide ml-2">Cameras</h1>
+			<PhSpinner v-if="isLoading" :size="24" class="ml-3 text-zinc-700 dark:text-zinc-300 animate-spin" />
 			<hr class="border-zinc-300 dark:border-zinc-700 w-full mx-4" />
 			<CreateCameraDialog v-on:camera-created="refreshCameras" />
 		</div>
@@ -220,6 +230,7 @@ async function saveSettings() {
 		<div class="flex items-center text-muted-foreground mt-6">
 			<PhHardDrive size="32" weight="duotone" />
 			<h1 class="text-2xl font-bold tracking-wide ml-2">Storage</h1>
+			<PhSpinner v-if="isLoading" :size="24" class="ml-3 text-zinc-700 dark:text-zinc-300 animate-spin" />
 			<hr class="border-zinc-300 dark:border-zinc-700 w-full ml-4" />
 		</div>
 
@@ -265,6 +276,7 @@ async function saveSettings() {
 		<div class="flex items-center text-muted-foreground mt-6">
 			<PhGear size="32" weight="duotone" />
 			<h1 class="text-2xl font-bold tracking-wide ml-2">Settings</h1>
+			<PhSpinner v-if="isLoading" :size="24" class="ml-3 text-zinc-700 dark:text-zinc-300 animate-spin" />
 			<hr class="border-zinc-300 dark:border-zinc-700 w-full ml-4" />
 		</div>
 

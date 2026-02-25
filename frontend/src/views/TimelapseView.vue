@@ -22,6 +22,8 @@ import {
 	PhCamera,
 	PhSpinner,
 	PhTrash,
+	PhWarningOctagon,
+	PhX,
 } from '@phosphor-icons/vue'
 import TimelapseStatusDot from '@/components/TimelapseStatusDot.vue'
 import ExportDialog from '@/components/ExportDialog.vue'
@@ -31,6 +33,7 @@ import { getCamera } from '@/api/camera'
 import { getFrame } from '@/api/frame'
 import ExportSection from '@/components/timelapse/ExportSection.vue'
 import { getSettings } from '@/api/settings'
+import BaseAlert from '@/components/BaseAlert.vue'
 
 const exportSection = ref<InstanceType<typeof ExportSection> | null>(null)
 
@@ -41,6 +44,7 @@ const settings = ref<AppSettingsResponse | null>(null)
 const isUpdating = ref(false)
 const isDeleting = ref(false)
 const imageError = ref(false)
+const errorMessage = ref('')
 
 const router = useRouter()
 const route = useRoute()
@@ -74,8 +78,7 @@ async function updateStatus(newStatus: TimelapseStatus) {
 		const _tl = await updateTimelapse(timelapse.value.id, body)
 		timelapse.value = _tl
 	} catch (err) {
-		console.error('Failed to update timelapse status:', err)
-		timelapse.value = null
+		errorMessage.value = `Failed to update timelapse status!\r\n${err}`
 	} finally {
 		isUpdating.value = false
 	}
@@ -123,7 +126,7 @@ onMounted(async () => {
 </script>
 
 <template>
-	<div v-if="timelapse" class="space-y-6">
+	<div v-if="timelapse" class="space-y-5">
 		<!-- Back link -->
 		<RouterLink to="/" class="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
 			<PhArrowLeft variant="duotone" :size="16" />
@@ -131,7 +134,7 @@ onMounted(async () => {
 		</RouterLink>
 
 		<!-- Header -->
-		<div class="flex items-start justify-between gap-4">
+		<div class="flex items-end justify-between gap-4">
 			<div class="space-y-1">
 				<h1 class="text-2xl font-semibold">{{ timelapse.name }}</h1>
 				<div class="flex items-center gap-2 text-sm text-muted-foreground">
@@ -218,14 +221,16 @@ onMounted(async () => {
 		</div>
 
 		<!-- Scheduled info banner -->
-		<div v-if="isScheduled" class="flex items-center gap-3 px-4 py-3 rounded-lg border border-indigo-500/30 bg-indigo-500/10 text-sm text-indigo-300">
-			<PhClock variant="duotone" :size="18" class="shrink-0 text-indigo-400" />
+		<BaseAlert :open="isScheduled" variant="info" :icon="PhClock">
 			<span>
 				This timelapse is <strong>scheduled to start</strong> on
 				<strong>{{ formatDate(timelapse.started_at) }}</strong>.
 				It will begin capturing automatically.
 			</span>
-		</div>
+		</BaseAlert>
+
+		<!-- Error banner -->
+		<BaseAlert :open="errorMessage !== ''" :message="errorMessage" variant="error" :icon="PhWarningOctagon" dismissible @close="errorMessage = ''" />
 
 		<!-- Main content grid -->
 		<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
