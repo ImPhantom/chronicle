@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import type { TimelapseResponse, CameraResponse, FrameResponse, TimelapseStatus } from '@/types'
+import type { TimelapseResponse, CameraResponse, FrameResponse, TimelapseStatus, AppSettingsResponse } from '@/types'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import ConnectionTypeBadge from '@/components/ConnectionTypeBadge.vue'
 import { Button } from '@/components/ui/button'
@@ -30,12 +30,14 @@ import { deleteTimelapse, getTimelapse, updateTimelapse } from '@/api/timelapse'
 import { getCamera } from '@/api/camera'
 import { getFrame } from '@/api/frame'
 import ExportSection from '@/components/timelapse/ExportSection.vue'
+import { getSettings } from '@/api/settings'
 
 const exportSection = ref<InstanceType<typeof ExportSection> | null>(null)
 
 const timelapse = ref<TimelapseResponse | null>(null)
 const camera = ref<CameraResponse | null>(null)
 const lastFrame = ref<FrameResponse | null>(null)
+const settings = ref<AppSettingsResponse | null>(null)
 const isUpdating = ref(false)
 const isDeleting = ref(false)
 const imageError = ref(false)
@@ -92,13 +94,15 @@ async function doTimelapseDelete() {
 
 const fetchData = async (tl: TimelapseResponse | null) => {
 	if (!tl) return
-	const [_camera, _lastFrame] = await Promise.all([
+	const [_camera, _lastFrame, _settings] = await Promise.all([
 		getCamera(tl.camera_id),
 		tl.last_frame_id ? getFrame(tl.last_frame_id) : Promise.resolve(null),
+		getSettings(),
 	])
 
 	camera.value = _camera
 	lastFrame.value = _lastFrame
+	settings.value = _settings
 }
 
 onMounted(async () => {
@@ -192,10 +196,14 @@ onMounted(async () => {
 					</AlertDialogTrigger>
 					<AlertDialogContent>
 						<AlertDialogHeader>
-							<AlertDialogTitle>Delete timelapse?</AlertDialogTitle>
+							<AlertDialogTitle>Delete timelapse: {{ timelapse.name }}?</AlertDialogTitle>
 							<AlertDialogDescription>
-								This will permanently delete "{{ timelapse.name }}" and all its captured frames.
-								This action cannot be undone.
+								This will permanently remove all associated files from disk<br>
+								<strong>This action cannot be undone.</strong>
+
+								<pre class="mt-2 px-2 py-1 text-xs bg-zinc-200/60 dark:bg-zinc-800/60 rounded-sm text-blue-600 dark:text-blue-400">{{settings?.storage_path}}/timelapse_{{ timelapse.id }}
+{{settings?.storage_path}}/exports/timelapse_{{ timelapse.id }}_*.(mp4|webm)</pre>
+									<span class="text-xs text-muted-foreground">(if you wish to back the files up)</span>
 							</AlertDialogDescription>
 						</AlertDialogHeader>
 						<AlertDialogFooter>
@@ -322,7 +330,7 @@ onMounted(async () => {
 					</dl>
 				</div>
 
-				<ExportSection ref="exportSection" :timelapse-id="timelapse.id" />
+				<ExportSection ref="exportSection" :timelapse-id="timelapse.id" :storage-path="settings?.storage_path" />
 			</div>
 		</div>
 	</div>

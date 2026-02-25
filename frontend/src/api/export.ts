@@ -15,3 +15,6 @@ export const getExportStatus = (jobId: number) =>
 
 export const downloadExport = (jobId: number) =>
 	apiRequest<Blob>(`/api/v1/exports/${jobId}/download`)
+
+export const deleteExport = (jobId: number) =>
+	apiRequest<void>(`/api/v1/exports/${jobId}`, { method: 'DELETE' })

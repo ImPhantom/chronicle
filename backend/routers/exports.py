@@ -114,6 +114,19 @@ def download_export(job_id: int, db: Session = Depends(get_db)):
     )
 
 
+@router.delete("/{job_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_export(job_id: int, db: Session = Depends(get_db)):
+    job = db.get(ExportJob, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Export job not found")
+    if job.status == ExportStatus.running:
+        raise HTTPException(status_code=409, detail="Cannot delete a running export")
+    if job.output_path and os.path.isfile(job.output_path):
+        os.remove(job.output_path)
+    db.delete(job)
+    db.commit()
+
+
 @router.get("/list/{timelapse_id}")
 def list_exports_for_timelapse(timelapse_id: int, db: Session = Depends(get_db)):
 	timelapse = db.get(Timelapse, timelapse_id)

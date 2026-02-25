@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel as _BaseModel
 from sqlalchemy.orm import Session
 
+import capture_manager as cm
+from cleanup import delete_timelapse_files
 from capture import (
     CaptureError,
     _FORMAT_MEDIA_TYPE,
@@ -108,5 +110,8 @@ def delete_camera(camera_id: int, db: Session = Depends(get_db)):
     camera = db.get(CameraModel, camera_id)
     if camera is None:
         raise HTTPException(status_code=404, detail="Camera not found")
+    for timelapse in camera.timelapses:
+        cm.stop(timelapse.id)
+        delete_timelapse_files(timelapse.id, db)
     db.delete(camera)
     db.commit()

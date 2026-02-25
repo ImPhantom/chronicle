@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 import capture_manager as cm
+from cleanup import delete_timelapse_files
 from database import get_db
 from models.camera import Camera as CameraModel
 from models.timelapse import Timelapse as TimelapseModel, TimelapseStatus
@@ -87,5 +88,6 @@ def delete_timelapse(timelapse_id: int, db: Session = Depends(get_db)):
     if timelapse is None:
         raise HTTPException(status_code=404, detail="Timelapse not found")
     cm.stop(timelapse_id)
+    delete_timelapse_files(timelapse_id, db)
     db.delete(timelapse)
     db.commit()

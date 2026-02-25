@@ -84,6 +84,17 @@ const confirmDeleteCamera = (cam: CameraResponse) => {
 	cameraToDelete.value = cam
 }
 
+const getAssociatedCameraFiles = (cameraId?: number) => {
+	const tls = timelapses.value.filter(tl => tl.camera_id === cameraId)
+	let toBeRemoved = ""
+	for (const tl of tls) {
+		toBeRemoved += `${settings.value?.storage_path}/timelapse_${tl.id}/\r\n`
+		toBeRemoved += `${settings.value?.storage_path}/exports/timelapse_${tl.id}_*.*\r\n`
+	}
+
+	return toBeRemoved
+}
+
 onMounted(async () => {
 	try {
 		const [_settings, _storageStats, _timelapses] = await Promise.all([
@@ -186,8 +197,11 @@ async function saveSettings() {
 						<AlertDialogHeader>
 							<AlertDialogTitle>Delete camera '{{ cameraToDelete?.name }}'?</AlertDialogTitle>
 							<AlertDialogDescription>
-								Are you sure you want to delete this camera?
-								This may affect currently running timelapses!
+								Are you absolutely sure you want to delete this camera?<br>
+								This will delete all timelapses, frames and exports associated with this camera!<br>
+								<strong>This action cannot be undone.</strong>
+								<pre class="mt-2 px-2 py-1 text-xs bg-zinc-200/60 dark:bg-zinc-800/60 rounded-sm text-blue-600 dark:text-blue-400">{{ getAssociatedCameraFiles(cameraToDelete?.id) }}</pre>
+								<span class="text-xs text-muted-foreground">(if you wish to back the files up)</span>
 							</AlertDialogDescription>
 						</AlertDialogHeader>
 						<AlertDialogFooter>

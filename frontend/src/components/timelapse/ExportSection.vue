@@ -1,16 +1,20 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, type Component } from 'vue'
-import { getExportsForTimelapse, getExportStatus, downloadExport } from '@/api/export'
+import { getExportsForTimelapse, getExportStatus, downloadExport, deleteExport } from '@/api/export'
 import type { ExportJobResponse, ExportStatus } from '@/types'
-import Collapsible from '../ui/collapsible/Collapsible.vue'
-import CollapsibleTrigger from '../ui/collapsible/CollapsibleTrigger.vue'
-import CollapsibleContent from '../ui/collapsible/CollapsibleContent.vue'
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '../ui/collapsible'
+import {
+	AlertDialog, AlertDialogContent,
+	AlertDialogHeader, AlertDialogTitle, AlertDialogDescription,
+	AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
+} from '@/components/ui/alert-dialog'
 import Button from '../ui/button/Button.vue'
 import { PhCaretDown, PhCheckCircle, PhDownloadSimple, PhFilmSlate, PhSpinner, PhTrash, PhWarning } from '@phosphor-icons/vue'
 import { formatDuration } from 'date-fns'
 
 const props = defineProps<{
 	timelapseId: number,
+	storagePath?: string,
 }>()
 
 const statusBadge: Record<ExportStatus, { label: string, class: string, icon: Component }> = {
@@ -22,6 +26,7 @@ const statusBadge: Record<ExportStatus, { label: string, class: string, icon: Co
 
 const exportJobs = ref<ExportJobResponse[]>([])
 const openStates = ref<Record<number, boolean>>({})
+const exportToDelete = ref<ExportJobResponse | null>(null)
 let exportPollTimer: ReturnType<typeof setInterval> | null = null
 
 function onJobStarted(job: ExportJobResponse) {
@@ -50,6 +55,17 @@ function startExportPolling() {
 			}
 		}
 	}, 1000)
+}
+
+async function deleteExportJob() {
+	if (!exportToDelete.value) return
+	try {
+		await deleteExport(exportToDelete.value.id)
+		exportJobs.value = exportJobs.value.filter(j => j.id !== exportToDelete.value?.id)
+		exportToDelete.value = null
+	} catch (err) {
+		console.error('Delete failed:', err)
+	}
 }
 
 async function downloadExportFile(job: ExportJobResponse) {
@@ -106,33 +122,35 @@ defineExpose({ onJobStarted })
 			>
 				<!-- Always-visible trigger row -->
 				<CollapsibleTrigger as-child>
-					<button class="w-full flex items-center justify-between px-3 py-2.5 text-left hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors cursor-pointer">
-						<div class="flex items-center gap-3">
-							<span class="text-sm font-semibold uppercase tracking-wide">{{ job.output_format }}</span>
-							<span class="text-xs text-muted-foreground">{{ job.output_fps }} fps · {{ job.resolution }}</span>
-						</div>
-
-						<div class="flex items-center gap-2">
-							<div
-								class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium"
-								:class="statusBadge[job.status].class"
-							>
-								<component
-									:is="statusBadge[job.status].icon"
-									:size="12"
-									:class="{ 'animate-spin': job.status === 'pending' || job.status === 'running' }"
-								/>
-								{{ statusBadge[job.status].label }}
+					<button class="w-full flex flex-col px-3 py-2.5 text-left hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors cursor-pointer">
+						<div class="flex items-center justify-between">
+							<div class="flex items-center gap-3">
+								<span class="text-sm font-semibold uppercase tracking-wide">{{ job.output_format }}</span>
+								<span class="text-xs text-muted-foreground">{{ job.output_fps }} fps · {{ job.resolution }}</span>
 							</div>
-							<PhCaretDown
-								:size="14"
-								class="text-zinc-400 transition-transform duration-200 shrink-0"
-								:class="{ 'rotate-180': openStates[job.id] }"
-							/>
-						</div>
 
+							<div class="flex items-center gap-2">
+								<div
+									class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium"
+									:class="statusBadge[job.status].class"
+								>
+									<component
+										:is="statusBadge[job.status].icon"
+										:size="12"
+										:class="{ 'animate-spin': job.status === 'pending' || job.status === 'running' }"
+									/>
+									{{ statusBadge[job.status].label }}
+								</div>
+								<PhCaretDown
+									:size="14"
+									class="text-zinc-400 transition-transform duration-200 shrink-0"
+									:class="{ 'rotate-180': openStates[job.id] }"
+								/>
+							</div>
+						</div>
+						
 						<!-- Progress bar (always visible while active) -->
-						<div v-if="job.status === 'pending' || job.status === 'running'" class="px-3 pb-2.5 space-y-1">
+						<div v-if="job.status === 'pending' || job.status === 'running'" class="pt-2 space-y-1">
 							<div class="w-full bg-zinc-200 dark:bg-zinc-700 rounded-full h-1 overflow-hidden">
 								<div
 									class="bg-primary h-1 rounded-full transition-all duration-500"
@@ -170,14 +188,13 @@ defineExpose({ onJobStarted })
 							class="text-xs bg-zinc-200 dark:bg-zinc-950 rounded p-2 overflow-auto max-h-24 text-red-400 whitespace-pre-wrap break-all"
 						>{{ job.error_message }}</pre>
 
-						<!-- Actions -->
-						<div v-if="job.status === 'completed'" class="flex items-center gap-2">
-							<Button size="sm" variant="outline" @click="downloadExportFile(job)">
+						<!-- Actions: show for completed and error states -->
+						<div v-if="job.status === 'completed' || job.status === 'error'" class="flex items-center justify-between gap-2">
+							<Button v-if="job.status === 'completed'" size="sm" variant="outline" @click="downloadExportFile(job)">
 								<PhDownloadSimple variant="duotone" :size="14" />
 								Download
 							</Button>
-							<!-- TODO: Implement delete -->
-							<Button size="sm" variant="destructive">
+							<Button size="sm" variant="destructive" @click="exportToDelete = job">
 								<PhTrash variant="duotone" :size="14" />
 								<span class="sr-only">Delete export</span>
 							</Button>
@@ -186,5 +203,25 @@ defineExpose({ onJobStarted })
 				</CollapsibleContent>
 			</Collapsible>
 		</div>
+
+		<AlertDialog :open="exportToDelete !== null">
+			<AlertDialogContent>
+				<AlertDialogHeader>
+					<AlertDialogTitle>Delete export #{{exportToDelete?.id }}'?</AlertDialogTitle>
+					<AlertDialogDescription>
+						Are you sure you want to delete this export?<br>
+						<strong>This action cannot be undone.</strong>
+						<pre class="mt-2 px-2 py-1 text-xs bg-zinc-800/60 rounded-sm text-blue-300">{{storagePath}}/exports/{{ exportToDelete?.output_file }}</pre>
+						<span class="text-xs text-muted-foreground">(if job failed, file might not exist)</span>
+					</AlertDialogDescription>
+				</AlertDialogHeader>
+				<AlertDialogFooter>
+					<AlertDialogCancel @click="exportToDelete = null">Cancel</AlertDialogCancel>
+					<AlertDialogAction @click="deleteExportJob" class="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+						Delete
+					</AlertDialogAction>
+				</AlertDialogFooter>
+			</AlertDialogContent>
+		</AlertDialog>
 	</div>
 </template>

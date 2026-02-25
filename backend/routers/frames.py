@@ -72,5 +72,7 @@ def delete_frame(frame_id: int, db: Session = Depends(get_db)):
     frame = db.get(FrameModel, frame_id)
     if frame is None:
         raise HTTPException(status_code=404, detail="Frame not found")
+    if frame.file_path and os.path.isfile(frame.file_path):
+        os.remove(frame.file_path)
     db.delete(frame)
     db.commit()
