@@ -16,9 +16,9 @@ const props = withDefaults(defineProps<{
 	dismissible: false
 })
 
-/*const emit = defineEmits<{
+const emit = defineEmits<{
 	(e: 'close'): void
-}>()*/
+}>()
 
 const variantClasses: Record<AlertVariant, {
 	container: string
@@ -49,16 +49,23 @@ const variantClasses: Record<AlertVariant, {
 </script>
 
 <template>
-	<div v-if="open" class="flex items-center gap-3 px-4 py-1.5 min-h-12 rounded-lg border" :class="variantClasses[variant].container">
-		<component v-if="icon" :is="icon" variant="duotone" :size="24" class="shrink-0" :class="variantClasses[variant].icon" />
+	<Transition 
+		enter-to-class="opacity-100"
+    	leave-active-class="duration-200 ease-in"
+    	leave-from-class="opacity-100"
+    	leave-to-class="transform opacity-0"
+	>
+		<div v-if="open" class="flex items-center gap-3 px-4 py-1.5 min-h-12 rounded-lg border" :class="variantClasses[variant].container">
+			<component v-if="icon" :is="icon" variant="duotone" :size="24" class="shrink-0" :class="variantClasses[variant].icon" />
 
-		<span class="text-sm">
-			<slot v-if="!message"></slot>
-			<span v-else>{{ message }}</span>
-		</span>
+			<span class="text-sm">
+				<slot v-if="!message"></slot>
+				<span v-else>{{ message }}</span>
+			</span>
 
-		<Button v-if="dismissible" size="icon-sm" variant="ghost" class="ml-auto" :class="variantClasses[variant].button" @click="open = false">
-			<PhX :size="14" weight="bold" />
-		</Button>
-	</div>
+			<Button v-if="dismissible" size="icon-sm" variant="ghost" class="ml-auto" :class="variantClasses[variant].button" @click="open = false; emit('close')">
+				<PhX :size="14" weight="bold" />
+			</Button>
+		</div>
+	</Transition>
 </template>

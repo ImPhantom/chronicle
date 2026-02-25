@@ -33,6 +33,7 @@ import type { CameraResponse, TimelapseResponse, TimelapseCreateRequest } from '
 import { PhWarning } from '@phosphor-icons/vue'
 import { createTimelapse } from '@/api/timelapse'
 import { getCameras } from '@/api/camera'
+import BaseAlert from './BaseAlert.vue'
 
 const emit = defineEmits<{ 'timelapse-created': [timelapse: TimelapseResponse] }>()
 
@@ -117,10 +118,9 @@ onMounted(async () => {
 					</DialogDescription>
 				</DialogHeader>
 
-				<div v-if="cameras.length == 0" class="flex items-center gap-3 px-4 py-3 mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-sm text-amber-300">
-					<PhWarning variant="duotone" :size="18" class="shrink-0 text-amber-400" />
-					<span>You must add a camera connection in the 'Settings' page before creating a timelapse!</span>
-				</div>
+				<BaseAlert :open="cameras.length == 0" variant="warning" :icon="PhWarning" class="mt-2">
+					You must add a camera before creating a timelapse!
+				</BaseAlert>
 
 				<FieldSet class="mt-4">
 					<FieldGroup>
