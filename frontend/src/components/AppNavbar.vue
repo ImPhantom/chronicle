@@ -14,7 +14,7 @@ function toggleTheme() {
 	<header class="border-b bg-background">
 		<div class="container mx-auto px-4 h-14 flex items-center justify-between">
 			<a href="/" class="font-semibold text-lg tracking-tight">Chronicle</a>
-			<div class="flex items-center gap-2">
+			<div class="flex items-center gap-3">
 				<a href="/settings" class="text-sm font-medium">Settings</a>
 				<button @click="toggleTheme" class="p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors" :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'">
 					<!-- Sun icon (shown in dark mode) -->

@@ -168,7 +168,7 @@ async function saveSettings() {
 				<div v-for="cam in cameras" :key="cam.id" class="border rounded-lg px-4 py-3 bg-zinc-100 dark:bg-zinc-900">
 					<div class="flex items-center">
 						<h3 class="text-lg font-semibold">{{ cam.name }}</h3>
-						<ConnectionTypeBadge :cam="cam" />
+						<ConnectionTypeBadge :cam="cam" class="ml-1.5" />
 
 						<button 
 							class="p-0.5 ml-auto text-zinc-500 hover:text-red-500/50 transition-colors"

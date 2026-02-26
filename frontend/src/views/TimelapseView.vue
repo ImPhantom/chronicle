@@ -23,7 +23,8 @@ import {
 	PhSpinner,
 	PhTrash,
 	PhWarningOctagon,
-	PhX,
+	PhCheck,
+	PhCheckFat,
 } from '@phosphor-icons/vue'
 import TimelapseStatusDot from '@/components/TimelapseStatusDot.vue'
 import ExportDialog from '@/components/ExportDialog.vue'
@@ -34,6 +35,8 @@ import { getFrame } from '@/api/frame'
 import ExportSection from '@/components/timelapse/ExportSection.vue'
 import { getSettings } from '@/api/settings'
 import BaseAlert from '@/components/BaseAlert.vue'
+import { ButtonGroup } from '@/components/ui/button-group'
+import Separator from '@/components/ui/separator/Separator.vue'
 
 const exportSection = ref<InstanceType<typeof ExportSection> | null>(null)
 
@@ -146,40 +149,41 @@ onMounted(async () => {
 			</div>
 
 			<!-- Controls -->
-			<div class="flex items-center gap-2 shrink-0">
+			<div class="flex items-center gap-3 shrink-0">
 				<template v-if="timelapse.status === 'pending'">
-					<Button size="sm" :disabled="isUpdating" @click="updateStatus('running')" class="bg-emerald-600 hover:bg-emerald-700 text-white">
-						<PhSpinner v-if="isUpdating" variant="duotone" class="animate-spin" />
-						<PhPlay v-else variant="duotone" />
-						Start
+					<Button variant="outline" :disabled="isUpdating" @click="updateStatus('running')">
+						<PhSpinner v-if="isUpdating" class="animate-spin" />
+						<PhPlay v-else weight="duotone" class="text-emerald-600" />
+						{{ isScheduled ? 'Start Now' : 'Start' }}
 					</Button>
 				</template>
 				<template v-else-if="timelapse.status === 'running'">
-					<Button size="sm" variant="outline" :disabled="isUpdating" @click="updateStatus('paused')" class="border-amber-500 text-amber-400 hover:bg-amber-500/10">
-						<PhSpinner v-if="isUpdating" variant="duotone" class="animate-spin" />
-						<PhPause v-else variant="duotone" />
-						Pause
-					</Button>
-					<Button size="sm" variant="outline" :disabled="isUpdating" @click="updateStatus('completed')" class="border-red-500 text-red-400 hover:bg-red-500/10">
-						<PhSpinner v-if="isUpdating" variant="duotone" class="animate-spin" />
-						<PhStop v-else variant="duotone" />
-						Stop
-					</Button>
+					<ButtonGroup>
+						<Button variant="outline" :disabled="isUpdating" @click="updateStatus('paused')">
+							<PhSpinner v-if="isUpdating" class="animate-spin" />
+							<PhPause v-else weight="duotone" class="text-amber-400" />
+							Pause
+						</Button>
+						<Button variant="outline" :disabled="isUpdating" @click="updateStatus('completed')">
+							<PhSpinner v-if="isUpdating" class="animate-spin" />
+							<PhStop v-else weight="duotone" class="text-red-400" />
+							Stop
+						</Button>
+					</ButtonGroup>
 				</template>
 				<template v-else-if="timelapse.status === 'paused'">
-					<Button size="sm" :disabled="isUpdating" @click="updateStatus('running')" class="bg-emerald-600 hover:bg-emerald-700 text-white">
-						<PhSpinner v-if="isUpdating" variant="duotone" class="animate-spin" />
-						<PhPlay v-else variant="duotone" />
-						Resume
-					</Button>
-					<Button size="sm" variant="outline" :disabled="isUpdating" @click="updateStatus('completed')" class="border-red-500 text-red-400 hover:bg-red-500/10">
-						<PhSpinner v-if="isUpdating" variant="duotone" class="animate-spin" />
-						<PhStop v-else variant="duotone" />
-						Stop
-					</Button>
-				</template>
-				<template v-else-if="timelapse.status === 'completed'">
-					<span class="text-sm text-muted-foreground">Completed</span>
+					<ButtonGroup>
+						<Button variant="outline" :disabled="isUpdating" @click="updateStatus('running')">
+							<PhSpinner v-if="isUpdating" class="animate-spin" />
+							<PhPlay v-else weight="duotone" class="text-emerald-600" />
+							Resume
+						</Button>
+						<Button variant="outline" :disabled="isUpdating" @click="updateStatus('completed')">
+							<PhSpinner v-if="isUpdating" class="animate-spin" />
+							<PhStop v-else weight="duotone" class="text-red-400" />
+							Stop
+						</Button>
+					</ButtonGroup>
 				</template>
 
 				<!-- Export (shown when frames exist) -->
@@ -190,11 +194,15 @@ onMounted(async () => {
 					@job-started="(job) => exportSection?.onJobStarted(job)"
 				/>
 
+				<span class="h-6">
+					<Separator orientation="vertical" />
+				</span>
+
 				<!-- Delete (always shown) -->
 				<AlertDialog>
 					<AlertDialogTrigger as-child>
-						<Button size="sm" variant="outline" class="border-red-500 text-red-400 hover:bg-red-500/10" :disabled="isDeleting">
-							<PhTrash variant="duotone" />
+						<Button variant="destructive" :disabled="isDeleting">
+							<PhTrash weight="duotone" />
 							Delete
 						</Button>
 					</AlertDialogTrigger>
@@ -242,7 +250,7 @@ onMounted(async () => {
 					Last Frame
 				</h2>
 
-				<div class="relative aspect-video w-full rounded-md bg-zinc-300/70 dark:bg-zinc-800/60 border overflow-hidden">
+				<div class="relative aspect-video w-full rounded-md bg-radial from-white from-20% to-zinc-300 dark:from-zinc-800 dark:to-zinc-950 border overflow-hidden">
 					<img
 						v-if="lastFrame && !imageError"
 						:src="`/api/v1/frames/${lastFrame.id}/image`"
@@ -250,8 +258,8 @@ onMounted(async () => {
 						@error="imageError = true"
 					/>
 					<div v-else class="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground">
-						<PhCameraSlash variant="duotone" :size="80" class="text-red-400/40" />
-						<span class="text-sm">No frames captured yet</span>
+						<PhCameraSlash weight="duotone" :size="56" class="mx-auto drop-shadow-[0_0_45px_rgba(0,0,0,1)] drop-shadow-white text-zinc-500 dark:text-zinc-400" />
+						<span class="text-xs">No frames captured yet</span>
 					</div>
 				</div>
 

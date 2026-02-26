@@ -69,8 +69,8 @@ async function handleSubmit() {
 <template>
 	<Dialog v-model:open="open">
 		<DialogTrigger as-child>
-			<Button size="sm" variant="outline">
-				<PhFilmSlate variant="duotone" />
+			<Button variant="outline">
+				<PhFilmSlate weight="duotone" />
 				Export
 			</Button>
 		</DialogTrigger>

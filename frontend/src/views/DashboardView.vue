@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue'
 import type { CameraResponse, TimelapseResponse, TimelapseStatus } from '@/types'
 import TimelapseDialog from '@/components/TimelapseDialog.vue';
-import { PhCamera, PhCameraSlash, PhFilmStrip, PhSpinner, PhTimer, PhVideoCamera, PhWarningOctagon, PhX } from '@phosphor-icons/vue';
+import { PhCamera, PhCameraSlash, PhFilmStrip, PhSpinner, PhTimer, PhVideoCamera, PhWarningOctagon } from '@phosphor-icons/vue';
 import ConnectionTypeBadge from '@/components/ConnectionTypeBadge.vue';
 import { getTimelapses } from '@/api/timelapse';
 import { getCameras } from '@/api/camera';
@@ -50,11 +50,11 @@ onMounted(async () => {
 })
 
 const statusMeta: Record<TimelapseStatus | 'scheduled', { dot: string; pill: string; label: string }> = {
-	pending: { dot: 'bg-zinc-400', pill: 'bg-zinc-700/70 text-zinc-300', label: 'Pending' },
-	scheduled: { dot: 'bg-indigo-400', pill: 'bg-indigo-950/70 text-indigo-300', label: 'Scheduled' },
-	running: { dot: 'bg-emerald-400', pill: 'bg-emerald-950/70 text-emerald-300', label: 'Running' },
-	paused: { dot: 'bg-amber-400', pill: 'bg-amber-950/70 text-amber-300', label: 'Paused' },
-	completed: { dot: 'bg-sky-400', pill: 'bg-sky-950/70 text-sky-300', label: 'Completed' },
+	pending: { dot: 'bg-zinc-500', pill: 'bg-zinc-700/70 text-zinc-200', label: 'Pending' },
+	scheduled: { dot: 'bg-indigo-400', pill: 'bg-indigo-900/70 text-indigo-200', label: 'Scheduled' },
+	running: { dot: 'bg-emerald-500', pill: 'bg-emerald-900/70 text-emerald-200', label: 'Running' },
+	paused: { dot: 'bg-amber-500', pill: 'bg-amber-900/70 text-amber-200', label: 'Paused' },
+	completed: { dot: 'bg-sky-500', pill: 'bg-sky-900/70 text-sky-200', label: 'Completed' },
 }
 
 function statusKey(tl: TimelapseResponse): TimelapseStatus | 'scheduled' {
@@ -97,13 +97,18 @@ function formatInterval(seconds: number): string {
 				class="flex flex-col border border-zinc-300/60 dark:border-zinc-800 rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-900 hover:cursor-pointer hover:-translate-y-1 hover:shadow-lg hover:shadow-zinc-400/50 dark:hover:shadow-black/40 transition-all duration-200"
 			>
 				<!-- Thumbnail -->
-				<div class="relative aspect-video w-full bg-zinc-500 dark:bg-zinc-800/60">
+				<div class="relative aspect-video w-full bg-radial from-white from-20% to-zinc-400 dark:from-zinc-800 dark:to-zinc-950">
 					<!-- Fallback icon -->
-					<PhCameraSlash variant="duotone" :size="64" class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-red-400/40" />
+					<span class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
+						<!--PhCameraSlash weight="duotone" :size="64" class="mx-auto dark:drop-shadow-[0_0_35px_rgba(0,0,0,0.5)] drop-shadow-red-500 text-red-600/60 dark:text-red-500/60" /-->
+						<PhCameraSlash weight="duotone" :size="56" class="mx-auto drop-shadow-[0_0_45px_rgba(0,0,0,1)] drop-shadow-white text-zinc-500 dark:text-zinc-400" />
+						<span class="text-xs font-medium text-muted-foreground">No frames yet</span>
+					</span>
+					
 					<!-- Last frame image -->
 					<img v-if="timelapse.last_frame_id" :src="`/api/v1/frames/${timelapse.last_frame_id}/image`" class="absolute inset-0 w-full h-full object-cover" @error="(e) => ((e.currentTarget as HTMLImageElement).style.display = 'none')" />
 					<!-- Bottom gradient for legibility -->
-					<div class="absolute bottom-0 left-0 right-0 h-12 bg-linear-to-t from-zinc-800/60 dark:from-black/70 to-transparent pointer-events-none" />
+					<div v-if="timelapse.last_frame_id" class="absolute bottom-0 left-0 right-0 h-12 bg-linear-to-t from-zinc-800/60 dark:from-black/70 to-transparent pointer-events-none" />
 					<!-- Frame count (bottom-left) -->
 					<div v-if="timelapse.frame_count > 0" class="absolute bottom-2 left-2.5 flex items-center gap-1 text-xs text-white/80">
 						<PhFilmStrip :size="14" />
