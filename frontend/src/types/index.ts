@@ -95,10 +95,17 @@ export interface FrameUpdateRequest {
 
 // ── Storage ────────────────────────────────────────────────────────────────────
 
+export interface TimelapseStorageItem {
+	timelapse_id: number
+	frames_size_bytes: number
+	exports_size_bytes: number
+}
+
 export interface StorageStats {
 	total_bytes: number;
 	used_bytes: number;
 	free_bytes: number;
+	timelapse_breakdown: TimelapseStorageItem[]
 }
 
 // ── Settings ───────────────────────────────────────────────────────────────────
@@ -158,8 +165,9 @@ export interface ExportJobResponse {
 	total_frames:  number
 	frames_done:   number
 	progress_pct:  number
-	output_file:   string | null
-	error_message: string | null
-	created_at:    string
-	completed_at:  string | null
+	output_file:     string | null
+	file_size_bytes: number | null
+	error_message:   string | null
+	created_at:      string
+	completed_at:    string | null
 }

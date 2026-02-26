@@ -27,8 +27,9 @@ class ExportJobResponse(BaseModel):
     total_frames:  int
     frames_done:   int
     progress_pct:  float
-    output_file:   Optional[str] = None
-    error_message: Optional[str] = None
+    output_file:      Optional[str] = None
+    file_size_bytes:  Optional[int] = None
+    error_message:    Optional[str] = None
     created_at:    datetime.datetime
     completed_at:  Optional[datetime.datetime] = None
 
@@ -50,6 +51,7 @@ class ExportJobResponse(BaseModel):
             frames_done=frames_done,
             progress_pct=progress_pct,
             output_file=output_file,
+            file_size_bytes=job.file_size_bytes,
             error_message=job.error_message,
             created_at=job.created_at,
             completed_at=job.completed_at,

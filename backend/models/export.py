@@ -28,6 +28,7 @@ class ExportJob(Base):
     total_frames:      Mapped[int]                      = mapped_column(Integer, nullable=False)
     frames_done:       Mapped[int]                      = mapped_column(Integer, nullable=False, default=0, server_default="0")
     output_path:       Mapped[str | None]               = mapped_column(String, nullable=True)
+    file_size_bytes:   Mapped[int | None]               = mapped_column(Integer, nullable=True)
     error_message:     Mapped[str | None]               = mapped_column(String, nullable=True)
     created_at:        Mapped[datetime.datetime]        = mapped_column(UTCDateTime, server_default=func.now(), nullable=False)  # pylint: disable=not-callable
     completed_at:      Mapped[datetime.datetime | None] = mapped_column(UTCDateTime, nullable=True)

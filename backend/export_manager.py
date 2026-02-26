@@ -181,6 +181,10 @@ def _run_export_sync(
             job.status = ExportStatus.completed
             job.frames_done = job.total_frames
             job.completed_at = datetime.datetime.now(datetime.timezone.utc)
+            try:
+                job.file_size_bytes = os.path.getsize(job.output_path)
+            except OSError:
+                job.file_size_bytes = None
             logger.info("Export job %d completed successfully", job_id)
 
         db.commit()

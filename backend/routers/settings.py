@@ -1,23 +1,34 @@
 import logging
 import os
 import shutil
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from database import get_db
+from models.export import ExportJob, ExportStatus
 from models.settings import AppSettings as AppSettingsModel
+from models.timelapse import Timelapse as TimelapseModel
 from schemas.settings import AppSettings, AppSettingsUpdate
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 logger = logging.getLogger(__name__)
 
 
+class TimelapseStorageItem(BaseModel):
+    timelapse_id: int
+    frames_size_bytes: int
+    exports_size_bytes: int
+
+
 class StorageStats(BaseModel):
     total_bytes: int
     used_bytes: int
     free_bytes: int
+    timelapse_breakdown: List[TimelapseStorageItem]
 
 
 def _ensure_settings_row(db: Session) -> AppSettingsModel:
@@ -54,9 +65,39 @@ def update_settings(payload: AppSettingsUpdate, db: Session = Depends(get_db)):
 
 
 @router.get("/storage", response_model=StorageStats)
-def read_storage(settings: AppSettingsModel = Depends(get_settings)):
+def read_storage(settings: AppSettingsModel = Depends(get_settings), db: Session = Depends(get_db)):
     try:
         usage = shutil.disk_usage(settings.storage_path)
     except OSError as e:
         raise HTTPException(status_code=500, detail=f"Storage path inaccessible: {e}")
-    return StorageStats(total_bytes=usage.total, used_bytes=usage.used, free_bytes=usage.free)
+
+    rows = db.execute(
+        select(
+            TimelapseModel.id,
+            TimelapseModel.size_bytes,
+            func.coalesce(func.sum(ExportJob.file_size_bytes), 0),
+        )
+        .outerjoin(
+            ExportJob,
+            (ExportJob.timelapse_id == TimelapseModel.id)
+            & (ExportJob.status == ExportStatus.completed)
+            & ExportJob.file_size_bytes.isnot(None),
+        )
+        .group_by(TimelapseModel.id)
+    ).all()
+
+    breakdown = [
+        TimelapseStorageItem(
+            timelapse_id=r[0],
+            frames_size_bytes=r[1],
+            exports_size_bytes=r[2],
+        )
+        for r in rows
+    ]
+
+    return StorageStats(
+        total_bytes=usage.total,
+        used_bytes=usage.used,
+        free_bytes=usage.free,
+        timelapse_breakdown=breakdown,
+    )

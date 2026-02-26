@@ -11,6 +11,7 @@ import {
 import Button from '../ui/button/Button.vue'
 import { PhCaretDown, PhCheckCircle, PhDownloadSimple, PhFilmSlate, PhSpinner, PhTrash, PhWarning } from '@phosphor-icons/vue'
 import { formatDuration } from 'date-fns'
+import { formatBytes } from '@/lib/format'
 
 const props = defineProps<{
 	timelapseId: number,
@@ -158,6 +159,9 @@ defineExpose({ onJobStarted })
 							</div>
 
 							<div class="flex items-center gap-2">
+								<span v-if="job.file_size_bytes" class="text-xs text-foreground">
+									{{ formatBytes(job.file_size_bytes) }}
+								</span>
 								<div
 									class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium"
 									:class="statusBadge[job.status].class"
@@ -202,7 +206,6 @@ defineExpose({ onJobStarted })
 							<div>
 								<p class="text-muted-foreground">Length</p>
 								<p class="font-medium">~{{ formatDuration({ seconds: Math.round(job.total_frames / job.output_fps) }) }}</p>
-								<p class="text-muted-foreground">({{ job.total_frames }} frames @ {{ job.output_fps }}fps)</p>
 							</div>
 							<div>
 								<p class="text-muted-foreground">Created</p>
