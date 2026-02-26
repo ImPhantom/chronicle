@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch } from 'vue'
 import { Button } from '@/components/ui/button'
 import {
 	Dialog,
@@ -32,13 +32,12 @@ import { Separator } from '@/components/ui/separator'
 import type { CameraResponse, TimelapseResponse, TimelapseCreateRequest } from '@/types'
 import { PhWarning } from '@phosphor-icons/vue'
 import { createTimelapse } from '@/api/timelapse'
-import { getCameras } from '@/api/camera'
 import BaseAlert from './BaseAlert.vue'
 
+const props = defineProps<{ cameras: CameraResponse[] }>()
 const emit = defineEmits<{ 'timelapse-created': [timelapse: TimelapseResponse] }>()
 
 const dialogOpen = ref(false)
-const cameras = ref<CameraResponse[]>([])
 
 // Core form fields
 const form = ref({
@@ -96,12 +95,6 @@ async function handleSubmit() {
 		isSubmitting.value = false
 	}
 }
-
-onMounted(async () => {
-	// silently ignore errors here - form will be unusable if no cameras anyways
-	// if backend is down, user will have seen error before opening dialog
-	cameras.value = await getCameras().catch(() => [])
-})
 </script>
 
 <template>

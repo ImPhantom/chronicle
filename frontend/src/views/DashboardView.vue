@@ -78,7 +78,7 @@ function formatInterval(seconds: number): string {
 				<h1 class="text-2xl font-semibold">Active Timelapses</h1>
 				<PhSpinner v-if="isLoading" :size="24" class="text-zinc-700 dark:text-zinc-300 animate-spin" />
 			</div>
-			<TimelapseDialog v-on:timelapse-created="fetchData" />
+			<TimelapseDialog :cameras="cameras" @timelapse-created="fetchData" />
 		</div>
 
 		<!-- Error alert -->
