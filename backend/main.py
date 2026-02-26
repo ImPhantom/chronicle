@@ -1,16 +1,21 @@
 from contextlib import asynccontextmanager
 import os
+import shutil
 
-from fastapi import FastAPI
 from dotenv import load_dotenv
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 import datetime
 
 load_dotenv()
 
 import capture_manager
 import models  # noqa: F401 — ensures all models are registered with Base.metadata
-from database import Base, engine, SessionLocal
+from database import Base, engine, SessionLocal, get_db
 from models.export import ExportJob as ExportJobModel, ExportStatus as ExportStatusEnum
 from models.timelapse import Timelapse as TimelapseModel, TimelapseStatus
 from routers import cameras, frames, timelapses, settings, exports
@@ -23,6 +28,10 @@ async def lifespan(app: FastAPI):
     db = SessionLocal()
     try:
         settings = _ensure_settings_row(db)
+        storage_path_override = os.getenv("STORAGE_PATH")
+        if storage_path_override and settings.storage_path != storage_path_override:
+            settings.storage_path = storage_path_override
+            db.commit()
         os.makedirs(settings.storage_path, exist_ok=True)
         capture_manager.scheduler.configure(timezone=settings.timezone)
         capture_manager.scheduler.start()
@@ -75,5 +84,23 @@ app.include_router(exports.router, prefix="/api/v1")
 
 
 @app.get("/health")
-def health():
-    return {"status": "ok"}
+def health(db: Session = Depends(get_db)):
+    db_ok = False
+    try:
+        db.execute(text("SELECT 1"))
+        db_ok = True
+    except Exception:
+        pass
+
+    scheduler_ok = capture_manager.scheduler.running
+    ffmpeg_ok = shutil.which("ffmpeg") is not None
+
+    all_ok = db_ok and scheduler_ok and ffmpeg_ok
+    body = {"status": "ok" if all_ok else "degraded", "db": db_ok, "scheduler": scheduler_ok, "ffmpeg": ffmpeg_ok}
+    return JSONResponse(content=body, status_code=200 if all_ok else 503)
+
+
+# Mount the built frontend last so all API and health routes take precedence.
+FRONTEND_DIST = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+if os.path.isdir(FRONTEND_DIST):
+    app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")
