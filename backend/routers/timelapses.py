@@ -1,4 +1,5 @@
 import datetime
+import logging
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -12,6 +13,7 @@ from models.timelapse import Timelapse as TimelapseModel, TimelapseStatus
 from schemas.timelapse import Timelapse, TimelapseCreate, TimelapseUpdate
 
 router = APIRouter(prefix="/timelapses", tags=["timelapses"])
+logger = logging.getLogger(__name__)
 
 
 @router.get("", response_model=List[Timelapse])
@@ -41,6 +43,10 @@ def create_timelapse(payload: TimelapseCreate, db: Session = Depends(get_db)):
     db.add(timelapse)
     db.commit()
     db.refresh(timelapse)
+    logger.info(
+        "Created timelapse %d (%s) for camera %d, initial status: %s",
+        timelapse.id, timelapse.name, timelapse.camera_id, timelapse.status,
+    )
     if timelapse.status == TimelapseStatus.running:
         cm.start(timelapse.id, timelapse.interval_seconds)
     elif timelapse.status == TimelapseStatus.pending and timelapse.started_at:
@@ -63,6 +69,7 @@ def update_timelapse(
     db.refresh(timelapse)
     new_status = timelapse.status
     if new_status != old_status:
+        logger.info("Timelapse %d status: %s → %s", timelapse_id, old_status, new_status)
         if new_status == TimelapseStatus.running:
             if old_status == TimelapseStatus.paused:
                 cm.resume(timelapse_id)
@@ -87,6 +94,7 @@ def delete_timelapse(timelapse_id: int, db: Session = Depends(get_db)):
     timelapse = db.get(TimelapseModel, timelapse_id)
     if timelapse is None:
         raise HTTPException(status_code=404, detail="Timelapse not found")
+    logger.info("Deleting timelapse %d (%s)", timelapse_id, timelapse.name)
     cm.stop(timelapse_id)
     delete_timelapse_files(timelapse_id, db)
     db.delete(timelapse)

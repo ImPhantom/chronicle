@@ -1,4 +1,5 @@
 import datetime
+import logging
 import os
 import re
 
@@ -15,6 +16,7 @@ from models.timelapse import Timelapse
 from schemas.export import ExportJobResponse, ExportRequest
 
 router = APIRouter(prefix="/exports", tags=["exports"])
+logger = logging.getLogger(__name__)
 
 _CUSTOM_RES_RE = re.compile(r"^\d+x\d+$")
 
@@ -73,6 +75,10 @@ def start_export(
     db.commit()
     db.refresh(job)
 
+    logger.info(
+        "Queued export job %d for timelapse %d (%d frames, %s %s)",
+        job.id, timelapse_id, len(frames), payload.resolution, payload.output_format,
+    )
     frame_paths = [f.file_path for f in frames]
     background_tasks.add_task(export_manager.start_export, job.id, frame_paths, output_path)
 
@@ -122,7 +128,9 @@ def delete_export(job_id: int, db: Session = Depends(get_db)):
     if job.status == ExportStatus.running:
         raise HTTPException(status_code=409, detail="Cannot delete a running export")
     if job.output_path and os.path.isfile(job.output_path):
+        logger.info("Removed export file %s", job.output_path)
         os.remove(job.output_path)
+    logger.info("Deleted export job %d", job_id)
     db.delete(job)
     db.commit()
 

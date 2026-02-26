@@ -1,3 +1,4 @@
+import logging
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -19,6 +20,7 @@ from routers.settings import get_settings
 from schemas.camera import Camera, CameraCreate, CameraUpdate, TestCaptureRequest
 
 router = APIRouter(prefix="/cameras", tags=["cameras"])
+logger = logging.getLogger(__name__)
 
 
 class HardwareCameraInfo(_BaseModel):
@@ -39,7 +41,8 @@ def list_hardware_cameras():
             HardwareCameraInfo(index=cam.index, name=cam.name or f"Camera {cam.index}")
             for cam in enumerate_cameras()
         ]
-    except Exception:
+    except Exception as exc:
+        logger.warning("Hardware camera enumeration failed: %s", exc)
         return []
 
 
@@ -48,6 +51,7 @@ def test_capture(
     payload: TestCaptureRequest,
     settings: AppSettingsModel = Depends(get_settings),
 ):
+    logger.info("Test capture requested (%s)", payload.connection_type)
     if payload.connection_type == "network":
         return _capture_network(payload.rtsp_url, settings)
     return _capture_hardware(payload.device_index, settings)
@@ -63,6 +67,7 @@ def _capture_network(rtsp_url: str, settings: AppSettingsModel) -> Response:
             timeout_seconds=settings.ffmpeg_timeout_seconds,
         )
     except CaptureError as exc:
+        logger.warning("Test capture failed: %s", exc)
         raise HTTPException(500, str(exc)) from exc
     return Response(content=data, media_type=_FORMAT_MEDIA_TYPE.get(fmt, "image/webp"))
 
@@ -72,6 +77,7 @@ def _capture_hardware(device_index: int, settings: AppSettingsModel) -> Response
     try:
         data = capture_hardware_bytes(device_index, image_format=fmt)
     except CaptureError as exc:
+        logger.warning("Test capture failed: %s", exc)
         raise HTTPException(500, str(exc)) from exc
     return Response(content=data, media_type=_FORMAT_MEDIA_TYPE.get(fmt, "image/webp"))
 
@@ -90,6 +96,7 @@ def create_camera(payload: CameraCreate, db: Session = Depends(get_db)):
     db.add(camera)
     db.commit()
     db.refresh(camera)
+    logger.info("Created camera %d (%s, %s)", camera.id, camera.name, camera.connection_type)
     return camera
 
 
@@ -102,6 +109,7 @@ def update_camera(camera_id: int, payload: CameraUpdate, db: Session = Depends(g
         setattr(camera, field, value)
     db.commit()
     db.refresh(camera)
+    logger.info("Updated camera %d", camera_id)
     return camera
 
 
@@ -110,6 +118,10 @@ def delete_camera(camera_id: int, db: Session = Depends(get_db)):
     camera = db.get(CameraModel, camera_id)
     if camera is None:
         raise HTTPException(status_code=404, detail="Camera not found")
+    logger.info(
+        "Deleting camera %d (%s) — stopping %d timelapse(s)",
+        camera_id, camera.name, len(camera.timelapses),
+    )
     for timelapse in camera.timelapses:
         cm.stop(timelapse.id)
         delete_timelapse_files(timelapse.id, db)

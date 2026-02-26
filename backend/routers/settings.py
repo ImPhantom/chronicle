@@ -1,3 +1,4 @@
+import logging
 import os
 import shutil
 
@@ -10,6 +11,7 @@ from models.settings import AppSettings as AppSettingsModel
 from schemas.settings import AppSettings, AppSettingsUpdate
 
 router = APIRouter(prefix="/settings", tags=["settings"])
+logger = logging.getLogger(__name__)
 
 
 class StorageStats(BaseModel):
@@ -47,6 +49,7 @@ def update_settings(payload: AppSettingsUpdate, db: Session = Depends(get_db)):
         setattr(settings, field, value)
     db.commit()
     db.refresh(settings)
+    logger.info("Settings updated: %r", field_dict)
     return settings
 
 

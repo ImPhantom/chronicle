@@ -22,6 +22,7 @@ scheduler = AsyncIOScheduler()
 
 
 def start(timelapse_id: int, interval_seconds: int) -> None:
+    logger.info("Starting capture for timelapse %d every %ds", timelapse_id, interval_seconds)
     # Cancel any pending scheduled-start job before launching the capture loop.
     try:
         scheduler.remove_job(f"timelapse_start_{timelapse_id}")
@@ -39,6 +40,7 @@ def start(timelapse_id: int, interval_seconds: int) -> None:
 
 def schedule_start(timelapse_id: int, start_at: datetime.datetime, interval_seconds: int) -> None:
     """Register a one-shot job that auto-starts capture at start_at (UTC)."""
+    logger.info("Scheduling auto-start for timelapse %d at %s", timelapse_id, start_at)
     scheduler.add_job(
         _auto_start_job,
         trigger=DateTrigger(run_date=start_at),
@@ -49,6 +51,7 @@ def schedule_start(timelapse_id: int, start_at: datetime.datetime, interval_seco
 
 
 def pause(timelapse_id: int) -> None:
+    logger.info("Pausing capture for timelapse %d", timelapse_id)
     try:
         scheduler.pause_job(f"timelapse_{timelapse_id}")
     except Exception:  # job may not exist if server restarted in paused state
@@ -56,6 +59,7 @@ def pause(timelapse_id: int) -> None:
 
 
 def resume(timelapse_id: int) -> None:
+    logger.info("Resuming capture for timelapse %d", timelapse_id)
     try:
         scheduler.resume_job(f"timelapse_{timelapse_id}")
     except Exception:
@@ -71,6 +75,7 @@ def resume(timelapse_id: int) -> None:
 
 def stop(timelapse_id: int) -> None:
     """Cancel both the capture loop and any pending scheduled-start job."""
+    logger.info("Stopping capture jobs for timelapse %d", timelapse_id)
     for job_id in [f"timelapse_{timelapse_id}", f"timelapse_start_{timelapse_id}"]:
         try:
             scheduler.remove_job(job_id)
@@ -88,9 +93,14 @@ async def _auto_start_job(timelapse_id: int, interval_seconds: int) -> None:
         now_utc = datetime.datetime.now(datetime.timezone.utc)
         # Edge case: ended_at already passed by the time the start job fires.
         if timelapse.ended_at and now_utc >= timelapse.ended_at:
+            logger.warning(
+                "Timelapse %d scheduled start fired but end time already passed — completing",
+                timelapse_id,
+            )
             timelapse.status = TimelapseStatus.completed
             db.commit()
             return
+        logger.info("Auto-starting timelapse %d", timelapse_id)
         timelapse.status = TimelapseStatus.running
         db.commit()
     finally:
@@ -120,6 +130,7 @@ def _do_sync_capture(timelapse_id: int) -> bool:
             return False
 
         if timelapse.ended_at and datetime.datetime.now(datetime.timezone.utc) >= timelapse.ended_at:
+            logger.info("Timelapse %d reached end time — auto-completing", timelapse_id)
             timelapse.status = TimelapseStatus.completed
             db.commit()
             return True
@@ -165,6 +176,7 @@ def _do_sync_capture(timelapse_id: int) -> bool:
         frame = Frame(timelapse_id=timelapse_id, file_path=file_path)
         db.add(frame)
         db.commit()
+        logger.debug("Captured frame for timelapse %d (%d bytes)", timelapse_id, len(data))
         return False
     finally:
         db.close()
