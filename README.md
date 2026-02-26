@@ -1,33 +1,30 @@
 # Chronicle
 
-*also formerly 'Netlapse'*
+*formerly 'Netlapse'*
 
 Timelapse management for network and USB cameras.
 
 > [!NOTE]
-> __I want to note that this project is not entirely 'vibe-coded'__ 
-> 
+> __I want to note that this project is not entirely 'vibe-coded'__
+>
 > I do know how to program and think logically, unlike the ol "script kiddos"
 
 ## Overview
 
-Chronicle captures RTSP streams and local hardware camera feeds on a schedule, storing each frame as a WebP image. A web UI lets you browse and manage timelapses, preview the latest capture, and control capture state. Planned: render any timelapse's frames into a downloadable MP4 or WebM video using FFmpeg.
+This is a simple self-hosted app that allows you to create timelapses using hardware/network cameras (from IP cameras to $15 USB webcams). 
+
+It captures frames from the camera on a schedule, storing each frame as a WebP image. A web UI then lets you browse and manage timelapses, preview the latest capture, control capture state, aswell as "Export" the timelapse frames into a downloadable MP4 or WebM file via FFmpeg.
 
 ## Features
 
-### Working today
-
-- **Camera management** — add and manage network (RTSP) and local USB cameras
-- **Live test capture** — preview a frame before adding a camera
-- **Frame browser** — view captured frames and last-frame preview per timelapse
+- **Camera management** — add and manage network (RTSP) and local hardware cameras
+- **Live test capture** — preview a frame before committing to a camera
+- **Scheduled capture** — periodic frame capture via APScheduler at a configurable interval
 - **Timelapse status control** — start, pause, resume, and complete timelapses
-- **App-wide settings** — configure storage path, FFmpeg options, image quality, and more
-
-### In progress / planned
-
-- **Scheduled capture loop** — periodic frame capture via APScheduler
-- **Video rendering** — render a timelapse's frames into a downloadable MP4/WebM via FFmpeg
-- **Docker packaging** — single container wrapping frontend and backend
+- **Scheduled auto-start** — set a future UTC time for a timelapse to begin automatically
+- **Video export** — render frames into a downloadable MP4 or WebM using FFmpeg, with live progress tracking
+- **Storage overview** — disk usage breakdown per timelapse
+- **App-wide settings** — configure storage path, FFmpeg options, image quality, capture interval, and timezone
 
 ## Architecture
 
@@ -37,9 +34,13 @@ chronicle/
 └── frontend/   # Vite + Vue 3 — management UI
 ```
 
-The frontend calls the FastAPI backend via a Vite dev proxy.
+The frontend is served by Nginx, which also reverse-proxies `/api` and `/health` to the FastAPI backend. In development the Vite dev server proxies API requests directly.
 
 ## Getting Started
+
+The fastest way to get Chronicle running is with Docker — see [`docs/QUICK_START.md`](docs/QUICK_START.md).
+
+For local development without Docker:
 
 ### Backend
 
@@ -56,7 +57,7 @@ uvicorn main:app --reload             # Start dev server (port 8000)
 cd frontend
 
 bun install       # Install dependencies
-bun run dev       # Start Vite dev server
+bun run dev       # Start Vite dev server (port 5173)
 bun run build     # Type-check then bundle
 bun run preview   # Preview production build
 ```
@@ -68,11 +69,11 @@ bun run preview   # Preview production build
 | Frontend framework | Vue 3 + TypeScript |
 | Frontend build | Vite + Bun |
 | UI components | shadcn-vue (reka-ui) + Tailwind CSS v4 |
-| Icons | Phosphor Icons, Lucide |
-| Utilities | VueUse, vue-router |
+| Icons | Phosphor Icons |
+| Utilities | vue-router |
 | Backend framework | FastAPI (Python) |
 | Database | SQLite via SQLAlchemy |
 | Validation | Pydantic |
 | Image capture | FFmpeg subprocess, OpenCV |
-| Scheduling | APScheduler (planned) |
-| Deployment | Docker (planned) |
+| Scheduling | APScheduler |
+| Deployment | Docker + Nginx |
