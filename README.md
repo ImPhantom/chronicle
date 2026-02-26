@@ -39,28 +39,15 @@ The frontend is served by Nginx, which also reverse-proxies `/api` and `/health`
 ## Getting Started
 
 The fastest way to get Chronicle running is with Docker — see [`docs/QUICK_START.md`](docs/QUICK_START.md).
-
-For local development without Docker:
-
-### Backend
-
 ```bash
-cd backend
+git clone https://github.com/ImPhantom/chronicle.git
+cd chronicle
 
-pip install -r requirements.txt      # Install dependencies
-uvicorn main:app --reload             # Start dev server (port 8000)
+docker compose up --build
+# App will be accessible at http://localhost:8080 (by default)
 ```
 
-### Frontend
-
-```bash
-cd frontend
-
-bun install       # Install dependencies
-bun run dev       # Start Vite dev server (port 5173)
-bun run build     # Type-check then bundle
-bun run preview   # Preview production build
-```
+If you wish to contribute, or even just run the project locally without docker — see [`CONTRIBUTING.md`](CONTRIBUTING.md)
 
 ## Tech Stack
 
