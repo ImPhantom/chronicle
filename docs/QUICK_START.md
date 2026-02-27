@@ -63,3 +63,93 @@ docker compose down
 ```
 
 Your data in `./data/` is preserved. To also wipe the database and all captured frames:
+```bash
+docker compose down -v
+```
+
+## Hardware Camera Support
+
+When running in Docker, hardware camera discovery (`cv2-enumerate-cameras`) cannot access the host's video devices directly. You must pass them through to the container.
+
+### Linux
+
+**1. Find your video devices:**
+
+```bash
+ls -la /dev/video*
+```
+
+**2. Add to `docker-compose.yml`:**
+
+```yaml
+services:
+  backend:
+    # ... existing config ...
+    devices:
+      - /dev/video0:/dev/video0
+      - /dev/video1:/dev/video1
+    # Add video group to allow access without root
+    group_add:
+      - video
+```
+
+Add one entry per camera, mapping the host device to the same path inside the container.
+
+### Windows
+
+Windows doesn't expose video devices the same way. You could possibly get it working with a **Video4Linux (V4L2) loopback**/WSL Hack.
+
+Running the app outside of docker will allow you to see hardware cameras, but you'll lack any of the stability/reliability that comes with the docker setup.
+
+### Verifying Device Access
+
+After restarting the container, test hardware capture from the UI or API:
+
+```bash
+curl http://localhost:8080/api/cameras/hardware
+```
+
+If devices are properly passed through, this returns a list of available cameras.
+
+---
+
+## Using a Remote Camera via RTSP (MediaMTX)
+
+If your camera is attached to a low-power device (e.g. a Raspberry Pi or other SBC) that isn't suitable for running Chronicle, you can use [MediaMTX](https://github.com/bluenviron/mediamtx) to publish that camera as an RTSP stream. Chronicle then connects to it over the network like any other IP camera — offloading all scheduling, frame storage, and export work to the Chronicle host.
+
+### 1. Install MediaMTX on the source device
+
+Download the latest release for your platform from the [MediaMTX releases page](https://github.com/bluenviron/mediamtx/releases) and extract the archive.
+
+### 2. Configure a camera source
+
+Edit `mediamtx.yml` to define a path for your camera:
+
+```yaml
+paths:
+  cam:
+    source: device:///dev/video0  # USB camera on Linux
+    # source: rpiCamera://        # Raspberry Pi camera module
+```
+
+### 3. Run MediaMTX
+
+```bash
+./mediamtx
+```
+
+By default, the RTSP stream is served at:
+
+```
+rtsp://<device-ip>:8554/cam
+```
+
+### 4. Add the stream to Chronicle
+
+In the Chronicle UI, add a new **Network (RTSP)** camera and enter the stream URL:
+
+```
+rtsp://<device-ip>:8554/cam
+```
+
+Use the **Test Capture** button to verify the stream is reachable before saving.

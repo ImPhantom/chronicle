@@ -1,19 +1,9 @@
 # Chronicle
-
-*formerly 'Netlapse'*
-
-Timelapse management for network and USB cameras.
-
-> [!NOTE]
-> __I want to note that this project is not entirely 'vibe-coded'__
->
-> I do know how to program and think logically, unlike the ol "script kiddos"
+Timelapse management for network and hardware cameras.
 
 ## Overview
 
-This is a simple self-hosted app that allows you to create timelapses using hardware/network cameras (from IP cameras to $15 USB webcams). 
-
-It captures frames from the camera on a schedule, storing each frame as a WebP image. A web UI then lets you browse and manage timelapses, preview the latest capture, control capture state, aswell as "Export" the timelapse frames into a downloadable MP4 or WebM file via FFmpeg.
+A simple self-hosted app for creating timelapses from IP cameras and USB webcams. It captures frames on a schedule, storing each as a WebP image. A web UI lets you browse and manage timelapses, preview the latest capture, control capture state, and export frames into a downloadable MP4 or WebM via FFmpeg.
 
 ## Features
 
@@ -36,18 +26,33 @@ chronicle/
 
 The frontend is served by Nginx, which also reverse-proxies `/api` and `/health` to the FastAPI backend. In development the Vite dev server proxies API requests directly.
 
+## Requirements
+
+> [!CAUTION]
+> **Do not run Chronicle on a low-power SBC (e.g. Raspberry Pi).** Frame capture and video export via FFmpeg are CPU-intensive. Run Chronicle on a reasonably powerful machine or homelab server instead, and use a tool like [MediaMTX](https://github.com/bluenviron/mediamtx) on the SBC to expose its camera as an RTSP stream that Chronicle can pull from remotely.
+
+### Host machine (running Chronicle)
+- **CPU:** 4+ core/thread, modern mid-range or better
+- **RAM:** 4–8 GB *(higher end recommended for large exports)*
+- **Storage:** 30–100 GB, SSD preferred *(varies heavily by timelapse configuration and export frequency)*
+- **Docker** with Compose plugin v2+
+
+### Camera
+- A hardware camera connected directly to the Docker host *(requires device passthrough — see [Quick Start](docs/QUICK_START.md))*
+- A network camera accessible via RTSP *(IP cameras, or an SBC running MediaMTX)*
+
 ## Getting Started
 
-The fastest way to get Chronicle running is with Docker — see [`docs/QUICK_START.md`](docs/QUICK_START.md).
 ```bash
 git clone https://github.com/ImPhantom/chronicle.git
 cd chronicle
-
 docker compose up --build
-# App will be accessible at http://localhost:8080 (by default)
+# App accessible at http://localhost:8080 by default
 ```
 
-If you wish to contribute, or even just run the project locally without docker — see [`CONTRIBUTING.md`](CONTRIBUTING.md)
+For full setup instructions including configuration, hardware camera passthrough, and using MediaMTX to relay a remote camera — see [`docs/QUICK_START.md`](docs/QUICK_START.md).
+
+To contribute or run the project locally without Docker — see [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Tech Stack
 

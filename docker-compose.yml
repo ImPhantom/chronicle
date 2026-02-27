@@ -10,6 +10,12 @@ services:
       - DATABASE_URL=sqlite:////app/data/chronicle.db
       - CORS_ORIGINS=http://localhost
       - STORAGE_PATH=/app/data
+    # Example: Pass through hardware cameras (Linux only)
+    # Uncomment and adjust the device paths to match your system
+    # devices:
+    #   - /dev/video0:/dev/video0
+    # group_add:
+    #   - video
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c",
