@@ -67,6 +67,24 @@ Your data in `./data/` is preserved. To also wipe the database and all captured 
 docker compose down -v
 ```
 
+
+## 5. Updating the app
+
+```bash
+# Make sure you're in the app directory
+cd chronicle
+
+# Stop the app
+docker compose down
+
+# Pull latest changes from git
+git pull
+
+# Restart the app
+docker compose up -d
+```
+
+
 ## Hardware Camera Support
 
 When running in Docker, hardware camera discovery (`cv2-enumerate-cameras`) cannot access the host's video devices directly. You must pass them through to the container.
