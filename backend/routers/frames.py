@@ -8,20 +8,26 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models.frame import Frame as FrameModel
 from models.timelapse import Timelapse as TimelapseModel
-from schemas.frame import Frame, FrameCreate, FrameUpdate
+from schemas.frame import Frame, FrameCreate, FrameListResponse, FrameUpdate
 
 router = APIRouter(prefix="/frames", tags=["frames"])
 
 
-@router.get("", response_model=List[Frame])
+@router.get("", response_model=FrameListResponse)
 def list_frames(
     timelapse_id: Optional[int] = Query(None),
+    offset: int = Query(0, ge=0),
+    limit: int = Query(48, ge=1, le=200),
+    order: str = Query("asc"),
     db: Session = Depends(get_db),
 ):
-    query = db.query(FrameModel).order_by(FrameModel.captured_at.asc())
+    query = db.query(FrameModel)
     if timelapse_id is not None:
         query = query.filter(FrameModel.timelapse_id == timelapse_id)
-    return query.all()
+    total = query.count()
+    col = FrameModel.captured_at.desc() if order == "desc" else FrameModel.captured_at.asc()
+    frames = query.order_by(col).offset(offset).limit(limit).all()
+    return FrameListResponse(frames=frames, total=total, offset=offset, limit=limit)
 
 @router.get("/{frame_id}/image")
 def get_frame_image(frame_id: int, db: Session = Depends(get_db)):

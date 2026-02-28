@@ -1,8 +1,18 @@
-import type { FrameCreateRequest, FrameResponse, FrameUpdateRequest } from "@/types";
+import type { FrameCreateRequest, FrameListResponse, FrameResponse, FrameUpdateRequest } from "@/types";
 import { apiRequest } from "./client";
 
 export const getFrames = (timelapseId?: number): Promise<FrameResponse[]> =>
 	apiRequest<FrameResponse[]>(`/api/v1/frames${timelapseId ? `/${timelapseId}` : ''}`)
+
+export const getFramesPaginated = (
+	timelapseId: number,
+	offset: number,
+	limit: number,
+	order: 'asc' | 'desc' = 'asc',
+): Promise<FrameListResponse> =>
+	apiRequest<FrameListResponse>(
+		`/api/v1/frames?timelapse_id=${timelapseId}&offset=${offset}&limit=${limit}&order=${order}`,
+	)
 
 export const getFrameImage = (id: number): Promise<Blob> =>
 	apiRequest<Blob>(`/api/v1/frames/${id}/image`)

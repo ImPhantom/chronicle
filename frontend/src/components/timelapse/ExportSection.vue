@@ -133,15 +133,15 @@ defineExpose({ onJobStarted })
 </script>
 
 <template>
-	<div v-if="exportJobs.length > 0" class="border rounded-lg bg-zinc-100 dark:bg-zinc-900 overflow-hidden">
+	<div v-if="exportJobs.length > 0" class="h-full flex flex-col border rounded-lg bg-zinc-100 dark:bg-zinc-900 overflow-hidden">
 		<!-- Section header -->
-		<div class="px-4 pt-3 pb-3 flex items-center gap-2">
+		<div class="shrink-0 px-4 pt-3 pb-3 flex items-center gap-2">
 			<PhFilmSlate variant="duotone" :size="16" class="text-zinc-400" />
 			<h2 class="text-sm font-medium">Exports</h2>
 		</div>
 
 		<!-- Job list -->
-		<div class="px-2 pb-2 space-y-2 max-h-80 overflow-y-auto">
+		<div class="flex-1 min-h-0 px-2 pb-2 space-y-2 overflow-y-auto">
 			<Collapsible
 				v-for="job in exportJobs"
 				:key="job.id"

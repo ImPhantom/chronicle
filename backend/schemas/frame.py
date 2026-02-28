@@ -23,3 +23,10 @@ class Frame(FrameBase):
     captured_at: datetime.datetime
 
     model_config = {"from_attributes": True}
+
+
+class FrameListResponse(BaseModel):
+    frames: list[Frame]
+    total: int
+    offset: int
+    limit: int

@@ -93,6 +93,13 @@ export interface FrameUpdateRequest {
 	file_path?: string;
 }
 
+export interface FrameListResponse {
+	frames: FrameResponse[]
+	total: number
+	offset: number
+	limit: number
+}
+
 // ── Storage ────────────────────────────────────────────────────────────────────
 
 export interface TimelapseStorageItem {

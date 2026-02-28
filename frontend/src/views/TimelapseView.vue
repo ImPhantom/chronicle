@@ -23,8 +23,6 @@ import {
 	PhSpinner,
 	PhTrash,
 	PhWarningOctagon,
-	PhCheck,
-	PhCheckFat,
 } from '@phosphor-icons/vue'
 import TimelapseStatusDot from '@/components/TimelapseStatusDot.vue'
 import ExportDialog from '@/components/ExportDialog.vue'
@@ -33,6 +31,7 @@ import { deleteTimelapse, getTimelapse, updateTimelapse } from '@/api/timelapse'
 import { getCamera } from '@/api/camera'
 import { getFrame } from '@/api/frame'
 import ExportSection from '@/components/timelapse/ExportSection.vue'
+import FrameExplorerSection from '@/components/timelapse/FrameExplorerSection.vue'
 import { getSettings } from '@/api/settings'
 import BaseAlert from '@/components/BaseAlert.vue'
 import { ButtonGroup } from '@/components/ui/button-group'
@@ -111,6 +110,11 @@ const fetchData = async (tl: TimelapseResponse | null) => {
 	camera.value = _camera
 	lastFrame.value = _lastFrame
 	settings.value = _settings
+}
+
+async function refreshTimelapse() {
+	if (!timelapse.value) return
+	timelapse.value = await getTimelapse(timelapse.value.id)
 }
 
 onMounted(async () => {
@@ -270,9 +274,9 @@ onMounted(async () => {
 			</div>
 
 			<!-- Right column -->
-			<div class="space-y-4">
+			<div class="flex flex-col gap-4">
 				<!-- Camera info -->
-				<div class="border rounded-lg bg-zinc-100 dark:bg-zinc-900 p-4 space-y-3">
+				<div class="shrink-0 border rounded-lg bg-zinc-100 dark:bg-zinc-900 p-4 space-y-3">
 					<h2 class="text-sm font-medium flex items-center gap-2">
 						<PhCamera variant="duotone" :size="18" class="text-zinc-400" />
 						Camera
@@ -291,7 +295,7 @@ onMounted(async () => {
 				</div>
 
 				<!-- Statistics -->
-				<div class="border rounded-lg bg-zinc-100 dark:bg-zinc-900 p-4 space-y-3">
+				<div class="shrink-0 border rounded-lg bg-zinc-100 dark:bg-zinc-900 p-4 space-y-3">
 					<h2 class="text-sm font-medium flex items-center gap-2">
 						<PhCalendar variant="duotone" :size="18" class="text-zinc-400" />
 						Statistics
@@ -344,13 +348,26 @@ onMounted(async () => {
 					</dl>
 				</div>
 
-				<ExportSection 
-					ref="exportSection"
-					:timelapse-id="timelapse.id"
-					:storage-path="settings?.storage_path"
-					@error="(msg) => errorMessage = msg"
-				/>
+				<div class="relative flex-1 min-h-48">
+					<div class="absolute inset-0">
+						<ExportSection
+							ref="exportSection"
+							:timelapse-id="timelapse.id"
+							:storage-path="settings?.storage_path"
+							@error="(msg) => errorMessage = msg"
+						/>
+					</div>
+				</div>
 			</div>
 		</div>
+
+		<!-- Frame explorer -->
+		<FrameExplorerSection
+			v-if="timelapse.frame_count > 0"
+			:timelapse-id="timelapse.id"
+			:frame-count="timelapse.frame_count"
+			@error="(msg) => errorMessage = msg"
+			@frame-deleted="refreshTimelapse"
+		/>
 	</div>
 </template>
