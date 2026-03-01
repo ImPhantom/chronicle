@@ -10,8 +10,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import Button from '../ui/button/Button.vue'
 import { PhCaretDown, PhCheckCircle, PhDownloadSimple, PhFilmSlate, PhSpinner, PhTrash, PhWarning } from '@phosphor-icons/vue'
-import { formatDuration } from 'date-fns'
-import { formatBytes } from '@/lib/format'
+import { formatBytes, formatInterval } from '@/lib/format'
 
 const props = defineProps<{
 	timelapseId: number,
@@ -205,7 +204,7 @@ defineExpose({ onJobStarted })
 							</div>
 							<div>
 								<p class="text-muted-foreground">Length</p>
-								<p class="font-medium">~{{ formatDuration({ seconds: Math.round(job.total_frames / job.output_fps) }) }}</p>
+								<p class="font-medium">~{{ formatInterval(Math.round(job.total_frames / job.output_fps)) }}</p>
 							</div>
 							<div>
 								<p class="text-muted-foreground">Created</p>

@@ -26,7 +26,7 @@ import {
 } from '@phosphor-icons/vue'
 import TimelapseStatusDot from '@/components/TimelapseStatusDot.vue'
 import ExportDialog from '@/components/ExportDialog.vue'
-import { formatBytes } from '@/lib/format'
+import { formatBytes, formatInterval } from '@/lib/format'
 import { deleteTimelapse, getTimelapse, updateTimelapse } from '@/api/timelapse'
 import { getCamera } from '@/api/camera'
 import { getFrame } from '@/api/frame'
@@ -36,6 +36,7 @@ import { getSettings } from '@/api/settings'
 import BaseAlert from '@/components/BaseAlert.vue'
 import { ButtonGroup } from '@/components/ui/button-group'
 import Separator from '@/components/ui/separator/Separator.vue'
+import { format } from 'date-fns'
 
 const exportSection = ref<InstanceType<typeof ExportSection> | null>(null)
 
@@ -56,14 +57,6 @@ const isScheduled = computed(() =>
 	!!timelapse.value.started_at &&
 	new Date(timelapse.value.started_at) > new Date()
 )
-
-function formatDate(iso: string | null): string {
-	if (!iso) return '—'
-	return new Date(iso).toLocaleString(undefined, {
-		dateStyle: 'long',
-		timeStyle: 'short',
-	})
-}
 
 async function updateStatus(newStatus: TimelapseStatus) {
 	if (!timelapse.value) return
@@ -148,7 +141,7 @@ onMounted(async () => {
 				<div class="flex items-center gap-2 text-sm text-muted-foreground">
 					<TimelapseStatusDot :status="timelapse.status" :scheduled="isScheduled" />
 					<span>·</span>
-					<span>every {{ timelapse.interval_seconds }}s</span>
+					<span>every {{ formatInterval(timelapse.interval_seconds) }}</span>
 				</div>
 			</div>
 
@@ -237,7 +230,7 @@ onMounted(async () => {
 		<BaseAlert :open="isScheduled" variant="info" :icon="PhClock">
 			<span>
 				This timelapse is <strong>scheduled to start</strong> on
-				<strong>{{ formatDate(timelapse.started_at) }}</strong>.
+				<strong>{{ format(timelapse.started_at ?? '', "MMMM do, h:mm a") }}</strong>.
 				It will begin capturing automatically.
 			</span>
 		</BaseAlert>
@@ -269,7 +262,7 @@ onMounted(async () => {
 
 				<p v-if="lastFrame" class="text-xs text-muted-foreground flex items-center gap-1.5">
 					<PhClock variant="duotone" :size="14" />
-					Captured {{ formatDate(lastFrame.captured_at) }}
+					Captured {{ format(lastFrame.captured_at, "MMMM do, h:mm a") }}
 				</p>
 			</div>
 
@@ -313,22 +306,22 @@ onMounted(async () => {
 								<PhClock variant="duotone" :size="14" />
 								Interval
 							</dt>
-							<dd class="font-medium">{{ timelapse.interval_seconds }} seconds</dd>
+							<dd class="font-medium">{{ formatInterval(timelapse.interval_seconds, false) }}</dd>
 						</div>
 						<div class="flex justify-between">
 							<dt class="text-muted-foreground flex items-center gap-1.5">
 								<PhCalendar variant="duotone" :size="14" />
 								Created
 							</dt>
-							<dd class="font-medium">{{ formatDate(timelapse.created_at) }}</dd>
+							<dd class="font-medium">{{ format(timelapse.created_at, "MMMM do, h:mm a") }}</dd>
 						</div>
-						<div class="flex justify-between">
+						<div v-if="timelapse.started_at" class="flex justify-between">
 							<dt class="text-muted-foreground flex items-center gap-1.5">
 								<PhPlay variant="duotone" :size="14" />
 								{{ isScheduled ? 'Scheduled for' : 'Started' }}
 							</dt>
 							<dd class="font-medium" :class="{ 'text-indigo-300': isScheduled }">
-								{{ formatDate(timelapse.started_at) }}
+								{{ format(timelapse.started_at ?? '', "MMMM do, h:mm a") }}
 							</dd>
 						</div>
 						<div v-if="timelapse.ended_at" class="flex justify-between">
@@ -336,7 +329,7 @@ onMounted(async () => {
 								<PhStop variant="duotone" :size="14" />
 								Ended
 							</dt>
-							<dd class="font-medium">{{ formatDate(timelapse.ended_at) }}</dd>
+							<dd class="font-medium">{{ format(timelapse.ended_at, "MMMM do, h:mm a") }}</dd>
 						</div>
 						<div class="flex justify-between">
 							<dt class="text-muted-foreground flex items-center gap-1.5">

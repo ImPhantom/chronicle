@@ -8,6 +8,7 @@ import { getTimelapses } from '@/api/timelapse';
 import { getCameras } from '@/api/camera';
 import BaseAlert from '@/components/BaseAlert.vue';
 import { useRoute } from 'vue-router';
+import { formatInterval } from '@/lib/format';
 
 const cameras = ref<CameraResponse[]>([])
 const timelapses = ref<TimelapseResponse[]>([])
@@ -60,14 +61,6 @@ const statusMeta: Record<TimelapseStatus | 'scheduled', { dot: string; pill: str
 function statusKey(tl: TimelapseResponse): TimelapseStatus | 'scheduled' {
 	if (tl.status === 'pending' && tl.started_at && new Date(tl.started_at) > new Date()) return 'scheduled'
 	return tl.status
-}
-
-function formatInterval(seconds: number): string {
-	if (seconds < 60) return `Every ${seconds}s`
-	if (seconds < 3600) return `Every ${Math.round(seconds / 60)}m`
-	const h = Math.floor(seconds / 3600)
-	const m = Math.round((seconds % 3600) / 60)
-	return m > 0 ? `Every ${h}h ${m}m` : `Every ${h}h`
 }
 </script>
 

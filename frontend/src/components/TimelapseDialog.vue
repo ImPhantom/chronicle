@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { Button } from '@/components/ui/button'
 import {
 	Dialog,
@@ -43,7 +43,13 @@ const dialogOpen = ref(false)
 const form = ref({
 	camera_id: 0,
 	name: '',
-	interval_seconds: 60,
+	interval_value: 60,
+	interval_unit: 'seconds',
+})
+
+const intervalSeconds = computed(() => {
+	const mults = { seconds: 1, minutes: 60, hours: 3600, days: 86400 }
+	return form.value.interval_value * mults[form.value.interval_unit as keyof typeof mults]
 })
 
 // Schedule state (kept separate to avoid type issues with empty strings)
@@ -56,7 +62,7 @@ const isSubmitting = ref(false)
 const submitError = ref<string | null>(null)
 
 function resetForm() {
-	form.value = { camera_id: 0, name: '', interval_seconds: 60 }
+	form.value = { camera_id: 0, name: '', interval_value: 60, interval_unit: 'seconds' }
 	startImmediately.value = true
 	isIndefinite.value = true
 	scheduledStart.value = ''
@@ -76,7 +82,7 @@ async function handleSubmit() {
 		const payload: TimelapseCreateRequest = {
 			camera_id: form.value.camera_id,
 			name: form.value.name,
-			interval_seconds: form.value.interval_seconds,
+			interval_seconds: intervalSeconds.value,
 			status: startImmediately.value ? 'running' : 'pending',
 			started_at: startImmediately.value
 				? new Date().toISOString()
@@ -143,19 +149,32 @@ async function handleSubmit() {
 						</Field>
 
 						<!-- Interval -->
-						<Field>
-							<FieldLabel for="interval_seconds">Interval</FieldLabel>
-							<div class="flex items-center gap-2">
+						<div class="grid grid-cols-2 gap-3">
+							<Field>
+								<FieldLabel for="interval_seconds">Interval</FieldLabel>
 								<Input
 									id="interval_seconds"
 									type="number"
 									min="1"
-									v-model.number="form.interval_seconds"
-									class="w-28"
+									v-model.number="form.interval_value"
 								/>
-								<span class="text-sm text-muted-foreground">seconds between frames</span>
-							</div>
-						</Field>
+							</Field>
+
+							<Field>
+								<FieldLabel for="interval_seconds">Unit</FieldLabel>
+								<Select v-model="form.interval_unit">
+									<SelectTrigger id="interval_unit">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="seconds">Seconds</SelectItem>
+										<SelectItem value="minutes">Minutes</SelectItem>
+										<SelectItem value="hours">Hours</SelectItem>
+										<SelectItem value="days">Days</SelectItem>
+									</SelectContent>
+								</Select>
+							</Field>
+						</div>						
 					</FieldGroup>
 				</FieldSet>
 
