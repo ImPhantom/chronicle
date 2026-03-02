@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input'
 import {
 	Field,
 	FieldDescription,
+	FieldError,
 	FieldGroup,
 	FieldLabel,
 	FieldSet,
@@ -61,6 +62,19 @@ const scheduledEnd = ref('')
 const isSubmitting = ref(false)
 const submitError = ref<string | null>(null)
 
+const nameTouched = ref(false)
+const intervalTouched = ref(false)
+
+const nameError = computed(() => {
+	if (!nameTouched.value) return ''
+	return form.value.name.trim() ? '' : 'Name is required'
+})
+
+const intervalError = computed(() => {
+	if (!intervalTouched.value) return ''
+	return form.value.interval_value >= 1 ? '' : 'Interval must be at least 1'
+})
+
 function resetForm() {
 	form.value = { camera_id: 0, name: '', interval_value: 60, interval_unit: 'seconds' }
 	startImmediately.value = true
@@ -68,6 +82,8 @@ function resetForm() {
 	scheduledStart.value = ''
 	scheduledEnd.value = ''
 	submitError.value = null
+	nameTouched.value = false
+	intervalTouched.value = false
 }
 
 watch(dialogOpen, (open) => {
@@ -75,6 +91,10 @@ watch(dialogOpen, (open) => {
 })
 
 async function handleSubmit() {
+	nameTouched.value = true
+	intervalTouched.value = true
+	if (nameError.value || intervalError.value) return
+
 	submitError.value = null
 	isSubmitting.value = true
 
@@ -122,11 +142,12 @@ async function handleSubmit() {
 				</BaseAlert>
 
 				<FieldSet class="mt-4">
-					<FieldGroup>
+					<FieldGroup class="gap-5">
 						<!-- Name -->
 						<Field>
 							<FieldLabel for="name">Name</FieldLabel>
-							<Input id="name" type="text" v-model="form.name" placeholder="My Timelapse" />
+							<Input id="name" type="text" v-model="form.name" placeholder="My Timelapse" @blur="nameTouched = true" />
+							<FieldError :errors="nameError ? [nameError] : []" />
 						</Field>
 
 						<!-- Camera -->
@@ -157,7 +178,9 @@ async function handleSubmit() {
 									type="number"
 									min="1"
 									v-model.number="form.interval_value"
+									@blur="intervalTouched = true"
 								/>
+								<FieldError :errors="intervalError ? [intervalError] : []" />
 							</Field>
 
 							<Field>

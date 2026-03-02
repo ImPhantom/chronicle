@@ -5,13 +5,20 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import {
+	Field,
+	FieldError,
+	FieldGroup,
+	FieldLabel,
+	FieldSet,
+} from '@/components/ui/field'
 import {
 	Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { PhFilmSlate, PhSpinner } from '@phosphor-icons/vue'
 import type { ExportJobResponse, OutputFormat, ExportResolution } from '@/types'
 import { startExport } from '@/api/export'
+import FieldDescription from './ui/field/FieldDescription.vue'
 
 const props = defineProps<{
 	timelapseId: number
@@ -34,6 +41,15 @@ const crf = ref(28)
 
 const estimatedSeconds = computed(() => Math.round(props.frameCount / outputFps.value))
 
+const customResTouched = ref(false)
+
+const customResError = computed(() => {
+	if (resolution.value !== 'custom' || !customResTouched.value) return ''
+	if (!customResolution.value.trim()) return 'Resolution is required'
+	if (!/^\d+x\d+$/.test(customResolution.value)) return 'Format must be WxH (e.g. 1920x1080)'
+	return ''
+})
+
 watch(open, (isOpen) => {
 	if (isOpen) {
 		outputFormat.value = 'webm'
@@ -42,10 +58,14 @@ watch(open, (isOpen) => {
 		customResolution.value = ''
 		crf.value = 28
 		submitError.value = null
+		customResTouched.value = false
 	}
 })
 
 async function handleSubmit() {
+	customResTouched.value = true
+	if (customResError.value) return
+
 	isSubmitting.value = true
 	submitError.value = null
 	try {
@@ -80,64 +100,73 @@ async function handleSubmit() {
 				<DialogTitle>Export Timelapse</DialogTitle>
 			</DialogHeader>
 
-			<div class="space-y-4 py-2">
-				<!-- Format -->
-				<div class="space-y-1.5">
-					<Label>Format</Label>
-					<Select v-model="outputFormat">
-						<SelectTrigger class="w-full">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="webm">WebM (VP9)</SelectItem>
-							<SelectItem value="mp4">MP4 (H.264)</SelectItem>
-						</SelectContent>
-					</Select>
-				</div>
+			<FieldSet class="py-2">
+				<FieldGroup class="gap-5">
+					<!-- Format -->
+					<Field>
+						<FieldLabel>Format</FieldLabel>
+						<Select v-model="outputFormat">
+							<SelectTrigger class="w-full">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="webm">WebM (VP9)</SelectItem>
+								<SelectItem value="mp4">MP4 (H.264)</SelectItem>
+							</SelectContent>
+						</Select>
+					</Field>
 
-				<!-- Resolution -->
-				<div class="space-y-1.5">
-					<Label>Resolution</Label>
-					<Select v-model="resolution">
-						<SelectTrigger class="w-full">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="original">Original</SelectItem>
-							<SelectItem value="1920x1080">1920 × 1080</SelectItem>
-							<SelectItem value="1280x720">1280 × 720</SelectItem>
-							<SelectItem value="640x360">640 × 360</SelectItem>
-							<SelectItem value="custom">Custom…</SelectItem>
-						</SelectContent>
-					</Select>
-				</div>
+					<!-- Resolution -->
+					<div class="flex gap-3">
+						<Field :class="resolution === 'custom' ? ' basis-1/2' : 'basis-full'">
+							<FieldLabel>Resolution</FieldLabel>
+							<Select v-model="resolution">
+								<SelectTrigger class="w-full">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="original">Original</SelectItem>
+									<SelectItem value="1920x1080">1920 × 1080</SelectItem>
+									<SelectItem value="1280x720">1280 × 720</SelectItem>
+									<SelectItem value="640x360">640 × 360</SelectItem>
+									<SelectItem value="custom">Custom…</SelectItem>
+								</SelectContent>
+							</Select>
+						</Field>
 
-				<!-- Custom resolution -->
-				<div v-if="resolution === 'custom'" class="space-y-1.5">
-					<Label>Custom resolution (W×H)</Label>
-					<Input v-model="customResolution" placeholder="e.g. 1440x900" />
-				</div>
+						<!-- Custom resolution -->
+						<Field v-if="resolution === 'custom'">
+							<FieldLabel>Custom resolution (W×H)</FieldLabel>
+							<Input v-model="customResolution" placeholder="e.g. 1440x900" @blur="customResTouched = true" />
+							<FieldError :errors="customResError ? [customResError] : []" />
+						</Field>
+					</div>
+					
 
-				<!-- FPS -->
-				<div class="space-y-1.5">
-					<Label>Frames per second</Label>
-					<Input v-model.number="outputFps" type="number" min="1" max="120" />
-				</div>
+					<div class="grid grid-cols-2 gap-3">
+						<!-- FPS -->
+						<Field>
+							<FieldLabel>Frames per second</FieldLabel>
+							<Input v-model.number="outputFps" type="number" min="1" max="120" />
+						</Field>
 
-				<!-- CRF -->
-				<div class="space-y-1.5">
-					<Label>Quality (CRF — lower = better)</Label>
-					<Input v-model.number="crf" type="number" min="0" max="63" />
-				</div>
+						<!-- CRF -->
+						<Field>
+							<FieldLabel>Quality <span class="text-xs text-muted-foreground">(lower = better)</span></FieldLabel>
+							<Input v-model.number="crf" type="number" min="0" max="63" />
+						</Field>
+					</div>
+					
 
-				<!-- Estimate -->
-				<p class="text-xs text-muted-foreground">
-					{{ frameCount }} frames at {{ outputFps }} fps ≈ {{ estimatedSeconds }}s video
-				</p>
+					<!-- Estimate -->
+					<p class="text-xs text-muted-foreground">
+						{{ frameCount }} frames at {{ outputFps }} fps ≈ {{ estimatedSeconds }}s video
+					</p>
 
-				<!-- Inline error -->
-				<p v-if="submitError" class="text-xs text-red-400">{{ submitError }}</p>
-			</div>
+					<!-- Inline error -->
+					<p v-if="submitError" class="text-xs text-red-400">{{ submitError }}</p>
+				</FieldGroup>
+			</FieldSet>
 
 			<DialogFooter>
 				<Button variant="outline" @click="open = false">Cancel</Button>

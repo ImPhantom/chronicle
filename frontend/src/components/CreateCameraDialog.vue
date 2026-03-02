@@ -12,7 +12,13 @@ import {
 	DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import {
+	Field,
+	FieldError,
+	FieldGroup,
+	FieldLabel,
+	FieldSet,
+} from '@/components/ui/field'
 import type { CameraCreateRequest, CameraResponse, ConnectionType, HardwareCameraInfo, TestCaptureRequest } from '@/types'
 import {
   Select,
@@ -44,6 +50,22 @@ const testCaptureError = ref<string | null>(null)
 
 const isSubmitting = ref(false)
 const submitError = ref<string | null>(null)
+
+const nameTouched = ref(false)
+const rtspUrlTouched = ref(false)
+
+const nameError = computed(() => {
+	if (!nameTouched.value) return ''
+	return name.value.trim() ? '' : 'Name is required'
+})
+
+const rtspUrlError = computed(() => {
+	if (!isNetwork.value || !rtspUrlTouched.value) return ''
+	if (!rtspUrl.value.trim()) return 'RTSP URL is required'
+	if (!rtspUrl.value.startsWith('rtsp://') && !rtspUrl.value.startsWith('rtsps://'))
+		return 'URL must start with rtsp:// or rtsps://'
+	return ''
+})
 
 async function fetchHardwareCameras() {
 	try {
@@ -80,6 +102,8 @@ watch(dialogOpen, (open) => {
 		rtspUrl.value = ''
 		deviceIndex.value = null
 		selectedHardwareCameraIndex.value = ''
+		nameTouched.value = false
+		rtspUrlTouched.value = false
 	}
 })
 
@@ -104,6 +128,10 @@ async function testCapture() {
 }
 
 async function handleSubmit() {
+	nameTouched.value = true
+	rtspUrlTouched.value = true
+	if (nameError.value || rtspUrlError.value) return
+
 	submitError.value = null
 	isSubmitting.value = true
 	const payload: CameraCreateRequest = {
@@ -140,71 +168,75 @@ async function handleSubmit() {
 						Configure a new camera source. Click save when you're done.
 					</DialogDescription>
 				</DialogHeader>
-				<div class="grid gap-4 mt-4">
-					<div class="grid gap-3">
-						<Label for="name-1">Name</Label>
-						<Input id="name-1" v-model="name" name="name" :placeholder="namePlaceholder" />
-					</div>
-					<div class="grid gap-3">
-						<Label>Connection Type</Label>
-
-						<Select v-model="connectionType">
-							<SelectTrigger class="w-full">
-								<SelectValue placeholder="Select connection type" />
-							</SelectTrigger>
-
-							<SelectContent>
-								<SelectItem value="network">
-									Network (RTSP)
-								</SelectItem>
-								<SelectItem value="hardware">
-									Hardware Camera
-								</SelectItem>
-							</SelectContent>
-						</Select>
-					</div>
-					<div v-if="isNetwork" class="grid gap-3">
-						<Label for="rtsp-1">RTSP URL</Label>
-						<Input id="rtsp-1" v-model="rtspUrl" name="rtsp_url" placeholder="rtsp://user:password@127.0.0.1:554/stream" />
-					</div>
-					<div v-if="isNetwork" class="grid gap-3">
-						<Button type="button" variant="outline" size="sm" :disabled="isTesting || !rtspUrl" @click="testCapture">
-							<span v-if="isTesting">Capturing...</span><span v-else>Test capture</span>
-						</Button>
-					</div>
-					<div v-if="isHardware" class="grid gap-3">
-						<Label>Hardware Camera</Label>
-
-						<Select v-model="selectedHardwareCameraIndex">
-							<SelectTrigger class="w-full">
-								<SelectValue placeholder="Select a camera" />
-							</SelectTrigger>
-
-							<SelectContent>
-								<SelectItem
-									v-for="cam in hardwareCameras"
-									:key="cam.index"
-									:value="String(cam.index)"
-									class="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none focus:bg-accent focus:text-accent-foreground"
-								>
-									{{ cam.name }} ({{ cam.index }})
-								</SelectItem>
-								<div v-if="hardwareCameras.length === 0" class="px-2 py-1.5 text-sm text-muted-foreground">
-									No cameras detected
-								</div>
-							</SelectContent>
-						</Select>
-					</div>
-					<div v-if="isHardware" class="grid gap-3">
-						<Button type="button" variant="outline" size="sm" :disabled="isTesting || deviceIndex === null" @click="testCapture">
-							<span v-if="isTesting">Capturing...</span><span v-else>Test capture</span>
-						</Button>
-					</div>
-					<div v-if="testCaptureUrl || testCaptureError" class="grid gap-2">
-						<img v-if="testCaptureUrl" :src="testCaptureUrl" alt="Test capture preview" class="w-full rounded-md border object-contain max-h-48" />
-						<p v-if="testCaptureError" class="text-sm text-destructive">{{ testCaptureError }}</p>
-					</div>
-				</div>
+				<FieldSet class="mt-4">
+					<FieldGroup class="gap-5">
+						<Field>
+							<FieldLabel for="name-1">Name</FieldLabel>
+							<Input id="name-1" v-model="name" name="name" :placeholder="namePlaceholder" @blur="nameTouched = true" />
+							<FieldError :errors="nameError ? [nameError] : []" />
+						</Field>
+						<Field>
+							<FieldLabel>Connection Type</FieldLabel>
+							<Select v-model="connectionType">
+								<SelectTrigger class="w-full">
+									<SelectValue placeholder="Select connection type" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="network">
+										Network (RTSP)
+									</SelectItem>
+									<SelectItem value="hardware">
+										Hardware Camera
+									</SelectItem>
+								</SelectContent>
+							</Select>
+						</Field>
+						<template v-if="isNetwork">
+							<Field>
+								<FieldLabel for="rtsp-1">RTSP URL</FieldLabel>
+								<Input id="rtsp-1" v-model="rtspUrl" name="rtsp_url" placeholder="rtsp://user:password@127.0.0.1:554/stream" @blur="rtspUrlTouched = true" />
+								<FieldError :errors="rtspUrlError ? [rtspUrlError] : []" />
+							</Field>
+							<Field>
+								<Button type="button" variant="outline" size="sm" :disabled="isTesting || !rtspUrl || !!rtspUrlError" @click="testCapture">
+									<span v-if="isTesting">Capturing...</span><span v-else>Test capture</span>
+								</Button>
+							</Field>
+						</template>
+						<template v-if="isHardware">
+							<Field>
+								<FieldLabel>Hardware Camera</FieldLabel>
+								<Select v-model="selectedHardwareCameraIndex">
+									<SelectTrigger class="w-full">
+										<SelectValue placeholder="Select a camera" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem
+											v-for="cam in hardwareCameras"
+											:key="cam.index"
+											:value="String(cam.index)"
+											class="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none focus:bg-accent focus:text-accent-foreground"
+										>
+											{{ cam.name }} ({{ cam.index }})
+										</SelectItem>
+										<div v-if="hardwareCameras.length === 0" class="px-2 py-1.5 text-sm text-muted-foreground">
+											No cameras detected
+										</div>
+									</SelectContent>
+								</Select>
+							</Field>
+							<Field>
+								<Button type="button" variant="outline" size="sm" :disabled="isTesting || deviceIndex === null" @click="testCapture">
+									<span v-if="isTesting">Capturing...</span><span v-else>Test capture</span>
+								</Button>
+							</Field>
+						</template>
+						<div v-if="testCaptureUrl || testCaptureError" class="grid gap-2">
+							<img v-if="testCaptureUrl" :src="testCaptureUrl" alt="Test capture preview" class="w-full rounded-md border object-contain max-h-48" />
+							<p v-if="testCaptureError" class="text-sm text-destructive">{{ testCaptureError }}</p>
+						</div>
+					</FieldGroup>
+				</FieldSet>
 				<DialogFooter class="flex-col items-start gap-2 sm:flex-row sm:items-center pt-3">
 					<p v-if="submitError" class="text-sm text-destructive">{{ submitError }}</p>
 					<div class="flex gap-2 sm:ml-auto">
