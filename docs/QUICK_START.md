@@ -1,18 +1,19 @@
 # Quick Start — Docker
 
-By far the easiest way to get the project up and running, a simple `docker compose up` command runs the backend API in a slim python container and serves the built frontend via an Nginx container.
+Pre-built images are published to GitHub Container Registry (GHCR) on every push to `master`. You only need the `docker-compose.yml` — no cloning or local build step required.
 
 ## Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/) with the Compose plugin (v2+)
 - FFmpeg available on the host is **NOT** required — it is bundled in the container
 
-## 1. Clone the repository
+## 1. Get the compose file
 
 ```bash
-git clone https://github.com/ImPhantom/chronicle.git
-cd chronicle
+curl -O https://raw.githubusercontent.com/ImPhantom/chronicle/master/docker-compose.yml
 ```
+
+Or download it manually from the [repository](https://github.com/ImPhantom/chronicle/blob/master/docker-compose.yml) and place it in an empty directory.
 
 ## 2. (Optional) Configuration
 
@@ -37,15 +38,14 @@ services:
       - "8080:80" # Change the left side to your preferred host port
 ```
 
-## 3. Build and start
+## 3. Pull and start
 
 ```bash
-docker compose up --build
+docker compose pull
+docker compose up -d
 ```
 
-The first build takes a few minutes while it installs Python and Node dependencies and compiles the frontend. Subsequent starts are fast.
-
-Once running, open **http://localhost:8080** in your browser. (if you changed the port, be sure you're using it when trying to access the site.)
+Docker will pull the latest pre-built images from GHCR and start both containers in the background. Once running, open **http://localhost:8080** in your browser (or whichever port you configured).
 
 If you cant access the frontend, check the container status:
 ```bash
@@ -71,18 +71,11 @@ docker compose down -v
 ## 5. Updating the app
 
 ```bash
-# Make sure you're in the app directory
-cd chronicle
-
-# Stop the app
-docker compose down
-
-# Pull latest changes from git
-git pull
-
-# Restart the app
+docker compose pull
 docker compose up -d
 ```
+
+Docker will pull any updated images and restart only the containers that changed. Your data in `./data/` is preserved.
 
 
 ## Hardware Camera Support

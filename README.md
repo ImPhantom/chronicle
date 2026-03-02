@@ -43,10 +43,12 @@ The frontend is served by Nginx, which also reverse-proxies `/api` and `/health`
 
 ## Getting Started
 
+Pre-built images are published to GHCR on every release — no local build step required.
+
 ```bash
-git clone https://github.com/ImPhantom/chronicle.git
-cd chronicle
-docker compose up --build
+curl -O https://raw.githubusercontent.com/ImPhantom/chronicle/master/docker-compose.yml
+docker compose pull
+docker compose up -d
 # App accessible at http://localhost:8080 by default
 ```
 
