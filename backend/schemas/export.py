@@ -1,8 +1,9 @@
 import datetime
 import os
+import re
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 OutputFormat = Literal["webm", "mp4"]
 Resolution   = Literal["original", "1920x1080", "1280x720", "640x360", "custom"]
@@ -14,6 +15,13 @@ class ExportRequest(BaseModel):
     resolution:        Resolution   = "original"
     custom_resolution: Optional[str] = None   # "WxH", only when resolution=="custom"
     crf:               int          = Field(default=28, ge=0, le=63)
+
+    @model_validator(mode="after")
+    def validate_custom_resolution(self) -> "ExportRequest":
+        if self.resolution == "custom":
+            if not self.custom_resolution or not re.match(r"^\d+x\d+$", self.custom_resolution):
+                raise ValueError("custom_resolution must be in 'WxH' format (e.g. '1920x1080')")
+        return self
 
 
 class ExportJobResponse(BaseModel):

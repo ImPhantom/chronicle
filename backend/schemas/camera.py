@@ -1,17 +1,24 @@
 import datetime
-from typing import Optional
+from typing import Annotated, Optional
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from models.camera import ConnectionType
 
 
 class CameraBase(BaseModel):
-    name: str
+    name: Annotated[str, Field(min_length=1, max_length=100)]
     connection_type: ConnectionType
     rtsp_url: Optional[str] = None
     device_index: Optional[int] = None
     enabled: bool = True
+
+    @field_validator("rtsp_url")
+    @classmethod
+    def validate_rtsp_url(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and not (v.startswith("rtsp://") or v.startswith("rtsps://")):
+            raise ValueError("RTSP URL must begin with rtsp:// or rtsps://")
+        return v
 
     @model_validator(mode="after")
     def validate_connection_fields(self) -> "CameraBase":
@@ -27,11 +34,18 @@ class CameraCreate(CameraBase):
 
 
 class CameraUpdate(BaseModel):
-    name: Optional[str] = None
+    name: Optional[Annotated[str, Field(min_length=1, max_length=100)]] = None
     connection_type: Optional[ConnectionType] = None
     rtsp_url: Optional[str] = None
     device_index: Optional[int] = None
     enabled: Optional[bool] = None
+
+    @field_validator("rtsp_url")
+    @classmethod
+    def validate_rtsp_url(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and not (v.startswith("rtsp://") or v.startswith("rtsps://")):
+            raise ValueError("RTSP URL must begin with rtsp:// or rtsps://")
+        return v
 
     @model_validator(mode="after")
     def validate_connection_fields(self) -> "CameraUpdate":
@@ -53,6 +67,13 @@ class TestCaptureRequest(BaseModel):
     connection_type: ConnectionType
     rtsp_url: Optional[str] = None
     device_index: Optional[int] = None
+
+    @field_validator("rtsp_url")
+    @classmethod
+    def validate_rtsp_url(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and not (v.startswith("rtsp://") or v.startswith("rtsps://")):
+            raise ValueError("RTSP URL must begin with rtsp:// or rtsps://")
+        return v
 
     @model_validator(mode="after")
     def validate_connection_fields(self) -> "TestCaptureRequest":

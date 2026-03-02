@@ -1,7 +1,6 @@
 import datetime
 import logging
 import os
-import re
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.responses import FileResponse
@@ -17,8 +16,6 @@ from schemas.export import ExportJobResponse, ExportRequest
 
 router = APIRouter(prefix="/exports", tags=["exports"])
 logger = logging.getLogger(__name__)
-
-_CUSTOM_RES_RE = re.compile(r"^\d+x\d+$")
 
 
 @router.post(
@@ -44,13 +41,6 @@ def start_export(
     )
     if not frames:
         raise HTTPException(status_code=422, detail="Timelapse has no frames to export")
-
-    if payload.resolution == "custom":
-        if not payload.custom_resolution or not _CUSTOM_RES_RE.match(payload.custom_resolution):
-            raise HTTPException(
-                status_code=422,
-                detail="custom_resolution must be in 'WxH' format (e.g. '1920x1080')",
-            )
 
     settings = db.get(AppSettings, 1)
     storage_path = settings.storage_path if settings else "./data"
