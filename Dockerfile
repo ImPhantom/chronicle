@@ -8,6 +8,8 @@ RUN bun run build:docker
 
 # Stage 2: Backend
 FROM python:3.12-slim AS backend
+ARG GIT_HASH=unknown
+ENV GIT_HASH=$GIT_HASH
 WORKDIR /app
 COPY backend/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt

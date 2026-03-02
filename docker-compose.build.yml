@@ -1,0 +1,13 @@
+services:
+
+  backend:
+    image: null
+    build:
+      context: .
+      target: backend
+
+  nginx:
+    image: null
+    build:
+      context: .
+      target: nginx

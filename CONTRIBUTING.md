@@ -19,7 +19,7 @@ Below is everything you need to get your development environment running and sub
 - **Python 3.12+**
 - **Bun** — [bun.sh](https://bun.sh)
 - **FFmpeg** — available on your `PATH`
-- **Docker** (optional, for testing the production build)
+- **Docker** (optional, for testing the production build locally)
 
 ### Backend
 
@@ -90,6 +90,26 @@ chore: bump reka-ui to 2.1.0
 - Vue 3 Composition API (`<script setup>`) throughout — no Options API
 - Tailwind CSS v4 for styling; use shadcn-vue components where possible
 - Keep components focused — if a component is getting large, split it
+
+---
+
+### Testing the Docker build locally
+
+CI publishes pre-built images to GHCR on every push to `master`, so the default `docker-compose.yml` pulls those. To test the Docker build from your local source, use the build override file:
+
+```bash
+# Build and start both containers from local source (GIT_HASH will show as "unknown")
+docker compose -f docker-compose.yml -f docker-compose.build.yml up --build
+```
+
+To also bake in the real commit hash (useful for testing the version footnote):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.build.yml build --build-arg GIT_HASH=$(git rev-parse HEAD)
+docker compose -f docker-compose.yml -f docker-compose.build.yml up
+```
+
+> **Note:** The `$(git rev-parse HEAD)` substitution requires a Unix shell (bash/zsh). On Windows, run this from Git Bash or WSL.
 
 ---
 
