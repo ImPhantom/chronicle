@@ -17,7 +17,7 @@ import models  # noqa: F401 — ensures all models are registered with Base.meta
 from database import Base, engine, SessionLocal, get_db
 from models.export import ExportJob as ExportJobModel, ExportStatus as ExportStatusEnum
 from models.timelapse import Timelapse as TimelapseModel, TimelapseStatus
-from routers import cameras, frames, timelapses, settings, exports
+from routers import cameras, frames, timelapses, settings, exports, version
 from routers.settings import _ensure_settings_row
 
 load_dotenv()
@@ -99,6 +99,7 @@ app.include_router(timelapses.router, prefix="/api/v1")
 app.include_router(frames.router, prefix="/api/v1")
 app.include_router(settings.router, prefix="/api/v1")
 app.include_router(exports.router, prefix="/api/v1")
+app.include_router(version.router, prefix="/api/v1")
 
 
 @app.get("/health")
