@@ -159,6 +159,14 @@ export interface ExportRequest {
 	resolution:         ExportResolution
 	custom_resolution?: string | null
 	crf:                number
+	smoothing?:         'blend' | 'interpolate'
+	target_duration?:   number
+	stabilization?:     boolean
+	denoising?:         boolean
+	color_correction?:  'auto' | 'manual'
+	brightness?:        number   // -1.0 to 1.0
+	contrast?:          number   // 0.5 to 2.0
+	saturation?:        number   // 0.0 to 2.0
 }
 
 export interface ExportJobResponse {

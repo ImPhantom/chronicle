@@ -25,6 +25,13 @@ class ExportJob(Base):
     resolution:        Mapped[str]                      = mapped_column(String, nullable=False)   # "original" | "1920x1080" | ...
     custom_resolution: Mapped[str | None]               = mapped_column(String, nullable=True)
     crf:               Mapped[int]                      = mapped_column(Integer, nullable=False)
+    smoothing:         Mapped[str | None]               = mapped_column(String, nullable=True)
+    stabilization:     Mapped[bool]                     = mapped_column(Integer, nullable=False, default=False, server_default="0")
+    denoising:         Mapped[bool]                     = mapped_column(Integer, nullable=False, default=False, server_default="0")
+    color_correction:  Mapped[str | None]               = mapped_column(String, nullable=True)
+    brightness:        Mapped[float | None]             = mapped_column(nullable=True)
+    contrast:          Mapped[float | None]             = mapped_column(nullable=True)
+    saturation:        Mapped[float | None]             = mapped_column(nullable=True)
     total_frames:      Mapped[int]                      = mapped_column(Integer, nullable=False)
     frames_done:       Mapped[int]                      = mapped_column(Integer, nullable=False, default=0, server_default="0")
     output_path:       Mapped[str | None]               = mapped_column(String, nullable=True)

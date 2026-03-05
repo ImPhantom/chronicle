@@ -144,33 +144,25 @@ async function handleSubmit() {
 	isSubmitting.value = true
 	submitError.value = null
 	try {
-		// TODO: refactor this once backend is updated
-		const payload: ExportRequest & Record<string, unknown> = {
-			output_format: outputFormat.value,
-			output_fps: effectiveFps.value,
-			resolution: resolution.value,
-			custom_resolution: resolution.value === 'custom' ? customResolution.value : null,
-			crf: crf.value[0] ?? 28,
-		}
+		const targetDuration =
+			speedMode.value === 'duration'
+				? (durationPreset.value === 'custom' ? customDurationSeconds.value : durationPreset.value as number) || undefined
+				: undefined
 
-		if (smoothing.value !== 'none') {
-			payload.smoothing = smoothing.value
-		}
-		if (speedMode.value === 'duration') {
-			const secs = durationPreset.value === 'custom'
-				? customDurationSeconds.value
-				: durationPreset.value
-			if (secs) payload.target_duration = secs
-		}
-		if (stabilization.value) payload.stabilization = true
-		if (denoising.value) payload.denoising = true
-		if (colorCorrection.value !== 'none') {
-			payload.color_correction = colorCorrection.value
-			if (colorCorrection.value === 'manual') {
-				payload.brightness = (brightness.value[0] ?? 0) / 100
-				payload.contrast = (contrast.value[0] ?? 100) / 100
-				payload.saturation = (saturation.value[0] ?? 100) / 100
-			}
+		const payload: ExportRequest = {
+			output_format:     outputFormat.value,
+			output_fps:        effectiveFps.value,
+			resolution:        resolution.value,
+			custom_resolution: resolution.value === 'custom' ? customResolution.value : undefined,
+			crf:               crf.value[0] ?? 28,
+			smoothing:         smoothing.value !== 'none' ? smoothing.value : undefined,
+			target_duration:   targetDuration,
+			stabilization:     stabilization.value || undefined,
+			denoising:         denoising.value || undefined,
+			color_correction:  colorCorrection.value !== 'none' ? colorCorrection.value : undefined,
+			brightness:        colorCorrection.value === 'manual' ? (brightness.value[0] ?? 0) / 100 : undefined,
+			contrast:          colorCorrection.value === 'manual' ? (contrast.value[0] ?? 100) / 100 : undefined,
+			saturation:        colorCorrection.value === 'manual' ? (saturation.value[0] ?? 100) / 100 : undefined,
 		}
 
 		const result = await startExport(props.timelapseId, payload)

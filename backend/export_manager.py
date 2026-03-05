@@ -56,19 +56,43 @@ def _build_concat_list(frame_paths: List[str], fps: int) -> str:
     return path
 
 
-def _build_scale_filter(resolution: str, custom_resolution: Optional[str]) -> Optional[str]:
-    """Return a vf scale+pad filter string, or None for 'original'."""
-    if resolution == "original":
-        return None
-    if resolution == "custom":
-        target = custom_resolution or "1920x1080"
-    else:
-        target = resolution
-    w, h = target.split("x")
-    return (
-        f"scale={w}:{h}:force_original_aspect_ratio=decrease,"
-        f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2"
-    )
+def _build_video_filters(job: ExportJob) -> Optional[str]:
+    """Assemble the composite -vf filter chain. Returns None if no filters are needed."""
+    parts: List[str] = []
+
+    # 1. Scale + pad (reduce resolution early)
+    if job.resolution != "original":
+        target = job.custom_resolution or "1920x1080" if job.resolution == "custom" else job.resolution
+        w, h = target.split("x")
+        parts.append(
+            f"scale={w}:{h}:force_original_aspect_ratio=decrease,"
+            f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2"
+        )
+
+    # 2. Denoise before stabilization for cleaner motion analysis
+    if job.denoising:
+        parts.append("hqdn3d=4:3:6:4.5")
+
+    # 3. Stabilization (1-pass deshake, no extra library needed)
+    if job.stabilization:
+        parts.append("deshake")
+
+    # 4. Color correction
+    if job.color_correction == "auto":
+        parts.append("histeq")
+    elif job.color_correction == "manual":
+        b = job.brightness or 0.0
+        c = job.contrast or 1.0
+        s = job.saturation or 1.0
+        parts.append(f"eq=brightness={b:.4f}:contrast={c:.4f}:saturation={s:.4f}")
+
+    # 5. Smoothing (last, after spatial filters)
+    if job.smoothing == "blend":
+        parts.append("tblend=all_mode=average")
+    elif job.smoothing == "interpolate":
+        parts.append("minterpolate=mi_mode=mci:mc_mode=aobmc:vsbmc=1")
+
+    return ",".join(parts) if parts else None
 
 
 def _build_ffmpeg_cmd(job: ExportJob, concat_path: str) -> List[str]:
@@ -79,9 +103,9 @@ def _build_ffmpeg_cmd(job: ExportJob, concat_path: str) -> List[str]:
         "-fps_mode", "vfr",
     ]
 
-    scale_filter = _build_scale_filter(job.resolution, job.custom_resolution)
-    if scale_filter:
-        cmd += ["-vf", scale_filter]
+    vf = _build_video_filters(job)
+    if vf:
+        cmd += ["-vf", vf]
 
     if job.output_format == "webm":
         cmd += [

@@ -15,12 +15,24 @@ class ExportRequest(BaseModel):
     resolution:        Resolution   = "original"
     custom_resolution: Optional[str] = None   # "WxH", only when resolution=="custom"
     crf:               int          = Field(default=28, ge=0, le=63)
+    smoothing:         Optional[Literal["blend", "interpolate"]] = None
+    target_duration:   Optional[float] = None  # informational; FPS already computed client-side
+    stabilization:     bool = False
+    denoising:         bool = False
+    color_correction:  Optional[Literal["auto", "manual"]] = None
+    brightness:        Optional[float] = Field(default=None, ge=-1.0, le=1.0)
+    contrast:          Optional[float] = Field(default=None, ge=0.5, le=2.0)
+    saturation:        Optional[float] = Field(default=None, ge=0.0, le=2.0)
 
     @model_validator(mode="after")
     def validate_custom_resolution(self) -> "ExportRequest":
         if self.resolution == "custom":
             if not self.custom_resolution or not re.match(r"^\d+x\d+$", self.custom_resolution):
                 raise ValueError("custom_resolution must be in 'WxH' format (e.g. '1920x1080')")
+        if self.color_correction == "manual":
+            missing = [f for f in ("brightness", "contrast", "saturation") if getattr(self, f) is None]
+            if missing:
+                raise ValueError(f"color_correction='manual' requires: {', '.join(missing)}")
         return self
 
 
@@ -40,6 +52,13 @@ class ExportJobResponse(BaseModel):
     error_message:    Optional[str] = None
     created_at:    datetime.datetime
     completed_at:  Optional[datetime.datetime] = None
+    smoothing:        Optional[str]   = None
+    stabilization:    bool            = False
+    denoising:        bool            = False
+    color_correction: Optional[str]   = None
+    brightness:       Optional[float] = None
+    contrast:         Optional[float] = None
+    saturation:       Optional[float] = None
 
     @classmethod
     def from_job(cls, job, frames_done_override: Optional[int] = None) -> "ExportJobResponse":
@@ -63,4 +82,11 @@ class ExportJobResponse(BaseModel):
             error_message=job.error_message,
             created_at=job.created_at,
             completed_at=job.completed_at,
+            smoothing=job.smoothing,
+            stabilization=job.stabilization,
+            denoising=job.denoising,
+            color_correction=job.color_correction,
+            brightness=job.brightness,
+            contrast=job.contrast,
+            saturation=job.saturation,
         )
