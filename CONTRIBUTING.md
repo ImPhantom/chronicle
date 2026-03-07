@@ -93,6 +93,37 @@ chore: bump reka-ui to 2.1.0
 
 ---
 
+### Database Migrations
+
+We use [Alembic](https://alembic.sqlalchemy.org/) for schema migrations. All commands should be run from the `backend/` directory.
+
+**Apply all pending migrations** (run this after pulling changes that include new migrations):
+
+```bash
+cd backend
+alembic upgrade head
+```
+
+**Create a new migration** after changing a model in `models/`:
+
+```bash
+alembic revision --autogenerate -m "describe your change here"
+```
+
+Review the generated file in `migrations/versions/` before committing — autogenerate is not always perfect and may need manual adjustment.
+
+**Other useful commands:**
+
+```bash
+alembic current          # Show the current revision of the database
+alembic history          # List all revisions
+alembic downgrade -1     # Roll back one revision
+```
+
+> **Note:** In development, migrations run automatically when the backend starts (`uvicorn main:app --reload`), so you only need to run `alembic upgrade head` manually if you want to apply migrations without restarting the server.
+
+---
+
 ### Testing the Docker build locally
 
 CI publishes pre-built images to GHCR on every push to `master`, so the default `docker-compose.yml` pulls those. To test the Docker build from your local source, use the build override file:
