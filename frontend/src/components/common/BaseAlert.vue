@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Component } from 'vue'
-import Button from './ui/button/Button.vue';
 import { PhX } from '@phosphor-icons/vue';
+import { Button } from '../ui/button';
 
 type AlertVariant = 'error' | 'success' | 'warning' | 'info'
 

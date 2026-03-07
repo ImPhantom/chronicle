@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import CreateCameraDialog from '@/components/CreateCameraDialog.vue'
+import CreateCameraDialog from '@/components/settings/CreateCameraDialog.vue'
 import {
 	Field,
 	FieldDescription,
@@ -24,11 +24,11 @@ import type {
 import { PhCamera, PhGear, PhSpinner, PhTrash, PhWarningOctagon } from '@phosphor-icons/vue'
 import { ref, reactive, onMounted } from 'vue'
 
-import ConnectionTypeBadge from '@/components/ConnectionTypeBadge.vue'
+import ConnectionTypeBadge from '@/components/common/ConnectionTypeBadge.vue'
 import { getSettings, updateSettings } from '@/api/settings';
 import { getTimelapses } from '@/api/timelapse';
 import { deleteCamera, getCameras } from '@/api/camera';
-import BaseAlert from '@/components/BaseAlert.vue';
+import BaseAlert from '@/components/common/BaseAlert.vue';
 import StorageSection from '@/components/settings/StorageSection.vue';
 
 const settings = ref<AppSettingsResponse | null>(null)

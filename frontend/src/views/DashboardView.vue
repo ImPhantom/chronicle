@@ -3,10 +3,10 @@ import { ref, onMounted } from 'vue'
 import type { CameraResponse, TimelapseResponse, TimelapseStatus } from '@/types'
 import TimelapseDialog from '@/components/TimelapseDialog.vue';
 import { PhCamera, PhCameraSlash, PhFilmStrip, PhSpinner, PhTimer, PhVideoCamera, PhWarningOctagon } from '@phosphor-icons/vue';
-import ConnectionTypeBadge from '@/components/ConnectionTypeBadge.vue';
+import ConnectionTypeBadge from '@/components/common/ConnectionTypeBadge.vue';
 import { getTimelapses } from '@/api/timelapse';
 import { getCameras } from '@/api/camera';
-import BaseAlert from '@/components/BaseAlert.vue';
+import BaseAlert from '@/components/common/BaseAlert.vue';
 import { useRoute } from 'vue-router';
 import { formatInterval } from '@/lib/format';
 

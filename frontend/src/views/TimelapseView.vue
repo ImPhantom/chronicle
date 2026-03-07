@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import type { TimelapseResponse, CameraResponse, FrameResponse, TimelapseStatus, AppSettingsResponse } from '@/types'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
-import ConnectionTypeBadge from '@/components/ConnectionTypeBadge.vue'
+import ConnectionTypeBadge from '@/components/common/ConnectionTypeBadge.vue'
 import { Button } from '@/components/ui/button'
 import {
 	AlertDialog, AlertDialogTrigger, AlertDialogContent,
@@ -24,8 +24,8 @@ import {
 	PhTrash,
 	PhWarningOctagon,
 } from '@phosphor-icons/vue'
-import TimelapseStatusDot from '@/components/TimelapseStatusDot.vue'
-import ExportDialog from '@/components/ExportDialog.vue'
+import TimelapseStatusDot from '@/components/common/TimelapseStatusDot.vue'
+import ExportDialog from '@/components/timelapse/ExportDialog.vue'
 import { formatBytes, formatInterval } from '@/lib/format'
 import { deleteTimelapse, getTimelapse, updateTimelapse } from '@/api/timelapse'
 import { getCamera } from '@/api/camera'
@@ -33,7 +33,7 @@ import { getFrame } from '@/api/frame'
 import ExportSection from '@/components/timelapse/ExportSection.vue'
 import FrameExplorerSection from '@/components/timelapse/FrameExplorerSection.vue'
 import { getSettings } from '@/api/settings'
-import BaseAlert from '@/components/BaseAlert.vue'
+import BaseAlert from '@/components/common/BaseAlert.vue'
 import { ButtonGroup } from '@/components/ui/button-group'
 import Separator from '@/components/ui/separator/Separator.vue'
 import { format } from 'date-fns'

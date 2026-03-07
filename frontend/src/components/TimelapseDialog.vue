@@ -33,7 +33,7 @@ import { Separator } from '@/components/ui/separator'
 import type { CameraResponse, TimelapseResponse, TimelapseCreateRequest } from '@/types'
 import { PhWarning } from '@phosphor-icons/vue'
 import { createTimelapse } from '@/api/timelapse'
-import BaseAlert from './BaseAlert.vue'
+import BaseAlert from './common/BaseAlert.vue'
 
 const props = defineProps<{ cameras: CameraResponse[] }>()
 const emit = defineEmits<{ 'timelapse-created': [timelapse: TimelapseResponse] }>()
