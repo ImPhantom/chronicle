@@ -14,7 +14,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 import capture_manager
 import models  # noqa: F401 — ensures all models are registered with Base.metadata
-from database import Base, engine, SessionLocal, get_db
+from database import SessionLocal, get_db
 from models.export import ExportJob as ExportJobModel, ExportStatus as ExportStatusEnum
 from models.timelapse import Timelapse as TimelapseModel, TimelapseStatus
 from routers import cameras, frames, timelapses, settings, exports, version
@@ -35,8 +35,13 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Chronicle API starting up...")
-    Base.metadata.create_all(bind=engine)
-    logger.info("Database tables ready!")
+    import subprocess
+    subprocess.run(
+        [sys.executable, "-m", "alembic", "upgrade", "head"],
+        cwd=os.path.dirname(__file__),
+        check=True,
+    )
+    logger.info("Database migrations applied!")
     db = SessionLocal()
     try:
         settings = _ensure_settings_row(db)
