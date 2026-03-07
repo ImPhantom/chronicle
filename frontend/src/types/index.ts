@@ -185,4 +185,11 @@ export interface ExportJobResponse {
 	error_message:   string | null
 	created_at:      string
 	completed_at:    string | null
+	smoothing?:        'blend' | 'interpolate' | null
+	stabilization?:    boolean
+	denoising?:        boolean
+	color_correction?: 'auto' | 'manual' | null
+	brightness?:       number | null
+	contrast?:         number | null
+	saturation?:       number | null
 }

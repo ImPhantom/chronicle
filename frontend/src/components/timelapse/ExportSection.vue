@@ -9,8 +9,9 @@ import {
 	AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
 } from '@/components/ui/alert-dialog'
 import Button from '../ui/button/Button.vue'
-import { PhCaretDown, PhCheckCircle, PhDownloadSimple, PhFilmSlate, PhSpinner, PhTrash, PhWarning } from '@phosphor-icons/vue'
-import { formatBytes, formatInterval } from '@/lib/format'
+import { PhCaretDown, PhCheckCircle, PhDownloadSimple, PhFilmSlate, PhSpinner, PhTrash, PhWarning, PhWaveform, PhAnchorSimple, PhFunnel, PhPalette } from '@phosphor-icons/vue'
+import { formatBytes } from '@/lib/format'
+import ExportFilterPill from '../common/ExportFilterPill.vue'
 
 const props = defineProps<{
 	timelapseId: number,
@@ -194,22 +195,22 @@ defineExpose({ onJobStarted })
 				</CollapsibleTrigger>
 
 				<!-- Collapsible details -->
-				<CollapsibleContent class="border-t border-zinc-200 dark:border-zinc-700">
+				<CollapsibleContent class="collapse-anim border-t border-zinc-200 dark:border-zinc-700">
 					<div class="px-3 py-2.5 space-y-3">
-						<!-- Stats grid -->
-						<div class="grid grid-cols-3 gap-3 text-xs">
-							<div>
-								<p class="text-muted-foreground">CRF</p>
-								<p class="font-medium">{{ job.crf }}</p>
+						<!-- Encoding & processing chips -->
+						<div class="space-y-1.5">
+							<div class="flex flex-wrap gap-1.5">
+								<ExportFilterPill :label="`CRF ${job.crf}`" />
+								<ExportFilterPill v-if="job.smoothing === 'blend'" :icon="PhWaveform" label="Blend Smooth" />
+								<ExportFilterPill v-if="job.smoothing === 'interpolate'" :icon="PhWaveform" label="Frame Interpolation" />
+								<ExportFilterPill v-if="job.stabilization" :icon="PhAnchorSimple" label="Stabilized" />
+								<ExportFilterPill v-if="job.denoising" :icon="PhFunnel" label="Denoised" />
+								<ExportFilterPill v-if="job.color_correction === 'auto'" :icon="PhPalette" label="Auto Color" />
+								<ExportFilterPill v-if="job.color_correction === 'manual'" :icon="PhWaveform" label="Manual Color" />
 							</div>
-							<div>
-								<p class="text-muted-foreground">Length</p>
-								<p class="font-medium">~{{ formatInterval(Math.round(job.total_frames / job.output_fps)) }}</p>
-							</div>
-							<div>
-								<p class="text-muted-foreground">Created</p>
-								<p class="font-medium">{{ new Date(job.created_at).toLocaleDateString() }}</p>
-							</div>
+							<p v-if="job.color_correction === 'manual'" class="text-xs text-muted-foreground">
+								Brightness {{ (job.brightness ?? 0) >= 0 ? '+' : '' }}{{ (job.brightness ?? 0).toFixed(2) }} · Contrast {{ (job.contrast ?? 1).toFixed(2) }} · Saturation {{ (job.saturation ?? 1).toFixed(2) }}
+							</p>
 						</div>
 
 						<!-- Error message -->
